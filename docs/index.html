@@ -1,0 +1,660 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transaction Forge Event Builder</title>
+<style>
+:root {
+  --bg: #f6f7f9; --panel: #ffffff; --ink: #1c2330; --muted: #5b6577; --line: #dde1e8;
+  --accent: #1f5fbf; --accent-ink: #ffffff; --band: rgba(46, 160, 100, .28); --tick: #1c2330;
+  --v: #1b7a45; --s: #8a5a00; --c: #5b6577; --warn: #b3261e; --code-bg: #0f1623; --code-ink: #e6edf7;
+  --tip-bg: #1c2330; --tip-ink: #f3f6fb; --bar: #7da7e8;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11151c; --panel: #1a2029; --ink: #e8ecf3; --muted: #9aa5b8; --line: #2b3342;
+    --accent: #6ea4f4; --accent-ink: #0b1220; --band: rgba(80, 200, 140, .3); --tick: #e8ecf3;
+    --v: #5fcf92; --s: #e3b252; --c: #9aa5b8; --warn: #ff8a80; --code-bg: #0a0e15; --code-ink: #e6edf7;
+    --tip-bg: #e8ecf3; --tip-ink: #11151c; --bar: #4f79b8;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header, main { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
+header { padding-top: 22px; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+h2 { font-size: 15px; margin: 0 0 10px; letter-spacing: .02em; text-transform: uppercase; color: var(--muted); }
+p.lede { margin: 0 0 14px; color: var(--muted); max-width: 70ch; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 18px; align-items: start; padding-bottom: 40px; }
+@media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 14px; }
+button { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.size { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+label.f { display: block; font-size: 13px; color: var(--muted); }
+input[type=number], input[type=text], input[type=date] {
+  width: 100%; font: inherit; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--bg); color: var(--ink);
+}
+.sizeest { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.sizeest .big { font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.sizeest .big small { font-size: 13px; font-weight: 400; color: var(--muted); }
+.sizeest .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.parts { margin-top: 10px; display: grid; gap: 5px; }
+.part { display: grid; grid-template-columns: 130px 1fr 80px; gap: 8px; align-items: center; font-size: 13px; }
+.part .bar { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
+.part .bar i { display: block; height: 100%; background: var(--bar); }
+.part b { text-align: right; font-variant-numeric: tabular-nums; font-weight: 500; }
+.lever { padding: 10px 0; border-top: 1px solid var(--line); }
+.lever:first-of-type { border-top: 0; }
+.lever .top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.lever .name { font-weight: 600; }
+.lever .key { font: 12px ui-monospace, Consolas, monospace; color: var(--muted); }
+.lever .help { color: var(--muted); font-size: 13px; margin: 2px 0 6px; }
+.ctl { display: grid; grid-template-columns: 1fr 110px; gap: 12px; align-items: center; }
+.track { position: relative; height: 24px; }
+.track .band { position: absolute; top: 9px; height: 8px; background: var(--band); border-radius: 4px; }
+.track .tick { position: absolute; top: 5px; width: 2px; height: 16px; background: var(--tick); opacity: .55; }
+.track input[type=range] { position: absolute; inset: 0; width: 100%; margin: 0; background: transparent; }
+.badge { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.badge.verified { color: var(--v); } .badge.secondary { color: var(--s); } .badge.choice { color: var(--c); }
+.bench { font-size: 13px; margin-top: 4px; }
+.mix { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.checks { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.checks label { font-size: 14px; }
+.inc { border-top: 1px solid var(--line); padding: 10px 0; }
+.inc:first-child { border-top: 0; }
+.inc .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; align-items: end; }
+.inc select { width: 100%; font: inherit; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); }
+.inc .when { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.inc .help { font-size: 13px; color: var(--muted); margin: 4px 0 0; }
+.side { position: sticky; top: 12px; }
+@media (max-width: 900px) { .side { position: static; } }
+.tabs { display: flex; gap: 6px; margin-bottom: 8px; }
+.tabs button[aria-pressed=true] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+pre { margin: 0; background: var(--code-bg); color: var(--code-ink); padding: 12px; border-radius: 8px; overflow: auto; max-height: 340px; font: 12.5px/1.45 ui-monospace, Consolas, monospace; white-space: pre-wrap; word-break: break-word; }
+.row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.stat { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; padding: 3px 0; }
+.stat b { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+.err { color: var(--warn); font-size: 13px; margin: 6px 0 0; }
+.note { font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+footer { color: var(--muted); font-size: 12.5px; }
+a { color: var(--accent); }
+/* glossary hover terms */
+.g { border-bottom: 1px dotted currentColor; cursor: help; }
+.g:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 2px; }
+#tip { position: fixed; z-index: 20; max-width: 300px; padding: 8px 10px; border-radius: 8px; font-size: 13px; line-height: 1.4;
+       background: var(--tip-bg); color: var(--tip-ink); box-shadow: 0 6px 20px rgba(0,0,0,.25); pointer-events: none; }
+#tip[hidden] { display: none; }
+#glossary-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 4px 24px; margin: 0; }
+#glossary-list dt { font-weight: 600; margin-top: 8px; }
+#glossary-list dd { margin: 0; color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Transaction Forge: Event Builder</h1>
+  <p class="lede">Choose how big the dataset is and how many oddities it contains. The page writes the exact settings file (levers.json), command or Python call for <code>txnforge</code>. Green bands show a typical or expected range where one exists; every note says where the number comes from and how far to trust it. Dotted-underlined words are industry terms: hover, tap or tab to them for a definition, or see the glossary at the bottom.</p>
+  <div class="presets" id="presets" role="group" aria-label="Presets"></div>
+</header>
+<main class="layout">
+  <div>
+    <section class="card">
+      <h2>Dataset size</h2>
+      <div class="size" id="size"></div>
+      <label class="f" style="margin-top:10px"><input type="checkbox" id="s-strip"> Remove simulator-only fields (recommended for datasets a detector will read)</label>
+      <div class="sizeest" aria-live="polite">
+        <div class="big"><span id="se-msgs"></span> <small>messages (the events in the feed)</small></div>
+        <div class="sub">from about <b id="se-txns"></b> transactions · <span id="se-time"></span></div>
+        <div class="parts" id="se-parts"></div>
+        <p class="note">Messages grow in proportion to cards × days (about 2.9 per card per day by default). Merchants do not change the count; they only spread the same purchases over more shops (below about 100 merchants some purchases are skipped). The levers below move it a little: refunds, reversals, chargebacks, duplicates and fraud add messages, and declines remove clearings. Estimates of message counts were checked against real runs and land within about 3%. Big runs are cut into groups of cards (about 250,000 messages each) that generate in parallel and stream to disk, so memory stays small and size is limited by disk. The 10-million preset was run for real: 5.5 minutes, 3.7 GB.</p>
+        <p class="note" id="se-note"></p>
+      </div>
+    </section>
+    <div id="levers"></div>
+    <section class="card">
+      <h2>Fraud patterns (relative weights)</h2>
+      <p class="note" style="margin:0 0 8px">Which kinds of fraud the compromised cards produce. Only the ratios matter; a weight of 0 turns a pattern off.</p>
+      <div class="mix" id="mix"></div>
+    </section>
+    <section class="card">
+      <h2>Operational incidents</h2>
+      <div class="checks" id="incidents"></div>
+      <p class="note">Incidents are time-boxed events with known causes (issuer outage, latency spike, storm, rule change, release bug). They are written to <code>incidents.json</code>. There is no industry percentage for them; they exist so a monitor has something to find.</p>
+    </section>
+    <section class="card" id="custom-card">
+      <h2>Your own incidents</h2>
+      <p class="note" style="margin:0 0 8px">Place any of 12 incident types anywhere in the run: pick a type, a target, when it starts and how long it lasts. The prepared five above have fixed times; these do not. Each one is written to <code>incidents.json</code> with the ID INC-C1, INC-C2 and so on, and applies even if the prepared ones are switched off.</p>
+      <div id="custom-rows"></div>
+      <div class="row"><button id="add-incident">Add an incident</button></div>
+    </section>
+    <section class="card" id="glossary-card">
+      <h2>Glossary</h2>
+      <dl id="glossary-list"></dl>
+    </section>
+  </div>
+  <aside class="side">
+    <section class="card">
+      <h2>Output</h2>
+      <div class="tabs" id="tabs" role="group" aria-label="Output format"></div>
+      <pre id="out" tabindex="0"></pre>
+      <div class="row">
+        <button class="primary" id="copy">Copy</button>
+        <button id="download">Download levers.json</button>
+        <label class="f" style="align-self:center"><span style="cursor:pointer;text-decoration:underline">Load levers.json<input type="file" id="load" accept="application/json,.json" hidden></span></label>
+      </div>
+      <p class="err" id="errs" role="alert"></p>
+    </section>
+    <section class="card">
+      <h2>At a glance</h2>
+      <div class="stat"><span>Messages</span><b id="est-msgs"></b></div>
+      <div class="stat"><span>Transactions</span><b id="est-txns"></b></div>
+      <div class="stat"><span>Compromised cards</span><b id="est-cards"></b></div>
+      <div class="stat"><span>Fraud share of card volume</span><b><span id="est-bps"></span> bps</b></div>
+      <div class="stat"><span>Industry reference</span><b>about 6.6 bps worldwide (2023)</b></div>
+      <p class="note" id="est-note"></p>
+    </section>
+  </aside>
+</main>
+<footer style="max-width:1180px;margin:0 auto;padding:0 16px 28px">
+  <p><b>How to read the tags.</b> <span class="badge verified">Network rules</span> the number is stated in the card network's published processing rules, which this project cites. <span class="badge secondary">Secondary source</span> the number comes from a vendor, bank or trade source, not from the network's own rules; check the current primary document before quoting it. <span class="badge choice">Our choice</span> no public benchmark was found; the default is a modelling choice, picked so the data looks plausible. Figures change; these were gathered on 2026-11-04.</p>
+  <p>Sources:
+    <a href="https://www.federalreserve.gov/paymentsystems/2024-November-The-Federal-Reserve-Payments-Study.htm">Federal Reserve Payments Study (2022 data)</a> ·
+    <a href="https://nilsonreport.com/articles/card-fraud-losses-worldwide-in-2023/">Nilson Report, card fraud losses worldwide in 2023</a> ·
+    <a href="https://www.signifyd.com/blog/increase-authorization-rates/">Signifyd, authorization rates</a> ·
+    <a href="https://www.rapyd.net/blog/card-present-vs-card-not-present-transactions/">Rapyd, card-present vs card-not-present</a>.
+  </p>
+</footer>
+<div id="tip" role="tooltip" hidden></div>
+
+<script>
+/*DEFAULTS*/
+const DEFAULTS = {"card_activity":1,"fraud_rate":0.004,"fraud_mix":{"card_testing":1,"skimmed_fallback":1,"geo_velocity":1,"electronics_ring":1},"adjudicated_rate":0.8,"base_decline_rate":0.06,"reversal_timeout_rate":0.01,"refund_rate":0.02,"dispute_rate":0.004,"fallback_rate":0.01,"broken_chip_merchants":3,"broken_chip_fallback_rate":0.35,"incidents":["issuer_outage","latency_spike","volume_drop","fraud_rule_tightened","mapping_break"],"mapping_break_share":0.7,"custom_incidents":[],"duplicate_rate":0,"missing_terminal_rate":0,"amount_mismatch_rate":0,"late_clearing_rate":0,"orphan_clearing_rate":0};
+/*END DEFAULTS*/
+/*INCIDENT_INFO*/
+const INCIDENT_INFO = {"issuer_outage":{"label":"Issuer outage","target":"issuer","target_default":"ISS07","severity":{"label":"Share of that issuer's authorizations declined (code 91)","default":0.9,"min":0,"max":1,"step":0.05},"help":"One issuer cannot be reached, so most of its authorizations decline with 91."},"latency_spike":{"label":"Latency spike","target":"country","target_default":"GB","severity":{"label":"Response-time multiplier","default":6,"min":1,"max":20,"step":0.5},"help":"Approvals in one country take several times longer than normal."},"volume_drop":{"label":"Volume drop (storm)","target":"state","target_default":"FL","severity":{"label":"Share of normal volume that remains","default":0.15,"min":0,"max":1,"step":0.05},"help":"Card volume in one US state falls, then recovers over about a day."},"fraud_rule_tightened":{"label":"Fraud rule change","target":"mcc","target_default":"5732","severity":{"label":"Share of online purchases newly declined (code 59)","default":0.35,"min":0,"max":1,"step":0.05},"help":"A tighter fraud rule declines online purchases in one merchant category."},"mapping_break":{"label":"Mapping break","target":"acquirer","target_default":"","severity":{"label":"Share of pay-at-pump purchases with the wrong entry mode","default":0.7,"min":0,"max":1,"step":0.05},"help":"After a release, one acquirer sends pay-at-pump purchases with an online entry mode. Blank target picks an acquirer that runs pumps."},"network_outage":{"label":"Network outage","target":"none","target_default":"","severity":{"label":"Share of all authorizations declined (code 91)","default":0.95,"min":0,"max":1,"step":0.05},"help":"The network cannot reach issuers, so almost every authorization declines with 91."},"acquirer_outage":{"label":"Acquirer outage","target":"acquirer","target_default":"ACQ01","severity":{"label":"Share of that acquirer's purchases lost","default":0.9,"min":0,"max":1,"step":0.05},"help":"Merchants behind one acquirer cannot send transactions, so their volume vanishes."},"decline_spike":{"label":"Decline-code spike","target":"issuer","target_default":"","severity":{"label":"Extra share declined (code 05, do not honor)","default":0.15,"min":0,"max":1,"step":0.05},"help":"More authorizations decline with 05. Blank target hits every issuer."},"holiday_surge":{"label":"Holiday or promotion surge","target":"country","target_default":"","severity":{"label":"Volume multiplier","default":1.5,"min":1,"max":5,"step":0.1},"help":"Card volume rises across all cards (or one country) for the window."},"chip_firmware_bug":{"label":"Chip-reader firmware bug","target":"acquirer","target_default":"ACQ01","severity":{"label":"Share of chip and tap purchases that fall back to the stripe","default":0.3,"min":0,"max":1,"step":0.05},"help":"A bad terminal update makes chip and tap purchases fall back to the magnetic stripe."},"clearing_delay":{"label":"Clearing delay","target":"acquirer","target_default":"ACQ01","severity":{"label":"Extra days before clearing","default":6,"min":1,"max":20,"step":1},"help":"An acquirer's batch runs late, so clearings arrive days after authorization, some past the 7-day window."},"fraud_attack_wave":{"label":"Fraud attack wave","target":"none","target_default":"","severity":{"label":"Share of cards attacked","default":0.01,"min":0,"max":0.1,"step":0.001},"help":"A burst of fraud cases concentrated in the window, using the fraud-pattern mix."}};
+/*END INCIDENT_INFO*/
+/*ESTIMATE*/
+const ESTIMATE = {"requests_per_card_day":0.945,"clear_base":0.938,"clear_per_timeout":0.87,"reversal_base":0.1057,"reversal_per_timeout":1.86,"refund_share":0.93,"orphan_share":0.9,"fraud_msgs":{"card_testing":[25.8,30.4],"skimmed_fallback":[13.4,17.8],"geo_velocity":[6.0,8.0],"electronics_ring":[13.1,17.4]},"messages_per_second":9000,"parallel_efficiency":0.85,"group_messages":250000,"max_workers":4,"disk_bytes_per_message":370,"ram_gb_per_worker":0.45};
+/*END ESTIMATE*/
+const SIZE_DEFAULTS = {seed: 7, cards: 3000, merchants: 400, days: 14, start: "2026-03-02"};
+const FRAUD_BPS_PER_COMPROMISED_SHARE = 22000;   // measured on the default mix: about 88 bps when 0.4% of cards are compromised
+const INCIDENTS = {
+  issuer_outage: "Issuer outage (one issuer declines with 91 for 3 hours)",
+  latency_spike: "Latency spike (UK about 6x for 2 hours)",
+  volume_drop: "Storm (Florida volume falls to 15%, then recovers)",
+  fraud_rule_tightened: "Fraud rule change (electronics e-commerce declines with 59)",
+  mapping_break: "Mapping break (one acquirer sends the wrong entry mode)"
+};
+const PATTERNS = {card_testing: "Card testing", skimmed_fallback: "Skimmed card (fallback)", geo_velocity: "Geo velocity", electronics_ring: "Electronics ring"};
+const TAG = {verified: "Network rules", secondary: "Secondary source", choice: "Our choice"};
+
+// ---- glossary: [name, regex source (case-insensitive), definition] ----------------------------------
+const DE_NOTES = {4: "the amount", 11: "the STAN", 18: "the MCC", 22: "the entry mode", 25: "the reason code", 39: "the response code", 41: "the terminal ID", 48: "additional data (the trace ID is in subelement 63)", 49: "the currency"};
+const TERMS = [
+  ["Basis points (bps)", "bps|basis points?", "Basis points. 1 bp is 0.01%, so 100 bps is 1%. Fraud is usually quoted this way: 6.6 bps means about 6.6 cents lost for every $100 of card spending."],
+  ["Rulebook", "Rulebook|processing rules", "A card network's published processing rules: how authorizations, clearing and chargebacks must work. Section numbers in this project refer to the June 2025 edition."],
+  ["MCC", "MCC", "Merchant Category Code: a 4-digit code for the type of business, such as 5411 grocery, 5542 pay-at-the-pump fuel or 6011 ATM cash."],
+  ["DE (data element)", "DE( \\d+)?", "Data element: a numbered field in a card message. For example DE 4 is the amount, DE 22 the entry mode, DE 39 the response code and DE 41 the terminal ID."],
+  ["STAN", "STAN", "System Trace Audit Number: a 6-digit counter (DE 11) that identifies a message within a day. A duplicate request repeats the same STAN."],
+  ["Trace ID", "trace ID|trace", "A code carried in DE 48 (subelement 63) that ties together every message of one purchase: the authorization, any reversal, the clearing and any chargeback."],
+  ["Message", "messages?|events?","One record in the feed: an authorization request, its response, a clearing, a reversal or a chargeback. Also called an event; these are what the size estimate counts."],
+  ["Transaction", "transactions?", "One purchase attempt and everything that follows it (its lifecycle). Each transaction takes several messages."],
+  ["Lifecycle", "lifecycles?", "All the messages of one purchase in order: authorization, response, any reversal, clearing and any chargeback."],
+  ["Issuer", "issuers?", "The cardholder's bank. It decides whether to approve a purchase, and it is who the cardholder disputes with."],
+  ["Acquirer", "acquirers?", "The merchant's bank. It sends the merchant's transactions into the network and receives the money for them."],
+  ["Authorization", "authorizations?", "The question 'can this card pay this amount?', sent before a sale completes, and the issuer's answer (message types 0100 and 0110)."],
+  ["Preauthorization", "preauthorizations?", "A hold placed now, with the final amount settled later. Hotels and fuel pumps use them."],
+  ["Clearing", "clearings?|first presentment", "The acquirer's later batch message that carries the final amount (message type 1240). Money moves between banks after it."],
+  ["Reversal", "reversals?", "A message that cancels or reduces an earlier authorization, for example after a timeout (message type 0400)."],
+  ["Chargeback", "chargebacks?", "The issuer sends a disputed transaction back to the acquirer (message type 1442) with a reason code. Used for fraud claims and cardholder disputes."],
+  ["Refund", "refunds?", "The merchant returns money to the cardholder. It is a new transaction, not a cancellation of the first."],
+  ["Chip fallback", "technical fallback|fallback", "The terminal cannot read the chip, so the card is swiped or keyed instead. Rare in normal traffic, and a strong fraud signal when a card does it repeatedly."],
+  ["Offline chip", "offline chip", "A chip transaction the card approves on its own without asking the issuer, so no online authorization exists for it."],
+  ["Card-present", "card-present", "The physical card (or a phone acting as the card) is at the terminal: chip, tap or swipe."],
+  ["Card-not-present", "card-not-present|CNP", "Online, phone or mail order: the card is not physically shown."],
+  ["E-commerce", "e-commerce", "Online shopping. A card-not-present channel."],
+  ["ATM", "ATM", "Automated teller machine. Cash withdrawals use MCC 6011 and, in this model, a single message with no separate clearing."],
+  ["Pay-at-pump", "pay-at-pump|pay-at-the-pump", "An automated fuel dispenser (MCC 5542): the customer pays at the pump instead of going inside."],
+  ["Entry mode", "entry mode", "How the card data got into the transaction: chip, tap, swipe, keyed or online. It lives in DE 22."],
+  ["Response code", "response codes?", "A 2-digit code in DE 39 saying whether the issuer approved (00) or why it declined."],
+  ["Decline", "declines?|declined", "The issuer says no. The response code says why, for example 51 insufficient funds or 05 do not honor."],
+  ["Response code 91", "(?<=with )91", "Response code 91: issuer or switch inoperative, meaning the bank could not be reached."],
+  ["Response code 59", "(?<=with )59", "Response code 59: suspected fraud."],
+  ["Reason code 4837", "4837", "Chargeback reason code 4837: no cardholder authorization. The cardholder says they did not make the purchase."],
+  ["Reason code 4853", "4853", "Chargeback reason code 4853: cardholder dispute, for example goods not received."],
+  ["Reason code 4834", "4834", "Chargeback reason code 4834: point-of-interaction error, such as a duplicate charge or a wrong amount."],
+  ["Terminal ID", "terminal ID", "The code that identifies the card terminal (DE 41). Card-present messages are expected to carry it."],
+  ["Adjudicated", "adjudicated", "Reviewed by a person and confirmed as fraud. The only fraud label a real bank can fully trust, and it arrives late."],
+  ["Benign look-alike", "look-alikes?", "Something that looks suspicious but is valid, such as a merchant with a faulty chip reader. A good detector leaves it alone."],
+  ["Latency", "latency", "How long the issuer takes to answer an authorization, in milliseconds."],
+  ["Seed", "seed", "A number that fixes the randomness. The same seed and settings always produce the same dataset."],
+  ["Orphan clearing", "orphan clearings?", "A clearing with no matching authorization in the data."],
+  ["Gratuity", "gratuit(?:y|ies)", "A tip added after the authorization, so the final amount can legitimately exceed what was authorized."],
+  ["Mapping break", "mapping break", "A data-translation bug, often after a software release, that makes a field arrive with the wrong value."],
+  ["Card volume", "card volume", "The total dollar value of card spending."],
+  ["Excessive Chargeback program", "Excessive Chargeback program", "A card network's monitoring program for merchants with too many chargebacks. Per a bank guide, one network's program starts at 100 or more chargebacks a month and a ratio of 1.5% or more."]
+];
+const TERM_RES = TERMS.map(t => new RegExp("^(?:" + t[1] + ")$", "i"));
+const TERM_FIND = new RegExp("(?<![\\w.-])(?:" + TERMS.map(t => "(?:" + t[1] + ")").join("|") + ")(?![\\w-])", "gi");
+
+function termDef(i, text) {
+  const m = /^DE (\d+)$/i.exec(text);
+  return m && DE_NOTES[+m[1]] ? `DE ${m[1]} is ${DE_NOTES[+m[1]]}. ` + TERMS[i][2] : TERMS[i][2];
+}
+
+// wrap glossary terms found in text nodes under root; each term is marked once per card
+function enrich(root) {
+  const skip = "pre, code, input, textarea, button, a, .g, .badge, h1, script, style, select, #glossary-list, #tip";
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) if (n.nodeValue.trim() && !n.parentElement.closest(skip)) nodes.push(n);
+  const seen = new Map();
+  for (const node of nodes) {
+    const scope = node.parentElement.closest(".lever, section.card, header, footer, aside") || document.body;
+    if (!seen.has(scope)) seen.set(scope, new Set());
+    const done = seen.get(scope), text = node.nodeValue;
+    let last = 0, frag = null;
+    TERM_FIND.lastIndex = 0;
+    for (let m = TERM_FIND.exec(text); m; m = TERM_FIND.exec(text)) {
+      const i = TERM_RES.findIndex(re => re.test(m[0]));
+      if (i < 0 || done.has(i)) continue;
+      done.add(i);
+      frag = frag || document.createDocumentFragment();
+      frag.append(text.slice(last, m.index));
+      const s = document.createElement("span");
+      s.className = "g"; s.tabIndex = 0; s.dataset.def = termDef(i, m[0]); s.textContent = m[0];
+      frag.append(s);
+      last = m.index + m[0].length;
+    }
+    if (frag) { frag.append(text.slice(last)); node.replaceWith(frag); }
+  }
+}
+
+function setupTooltip() {
+  const tip = document.getElementById("tip");
+  let current = null;
+  const show = t => {
+    current = t; tip.textContent = t.dataset.def; tip.hidden = false;
+    const r = t.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
+    const left = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), window.innerWidth - w - 8);
+    const top = r.bottom + 8 + h > window.innerHeight ? Math.max(8, r.top - h - 8) : r.bottom + 8;
+    tip.style.left = left + "px"; tip.style.top = top + "px";
+    t.setAttribute("aria-describedby", "tip");
+  };
+  const hide = () => { if (current) current.removeAttribute("aria-describedby"); current = null; tip.hidden = true; };
+  const target = e => e.target.closest && e.target.closest(".g");
+  document.addEventListener("mouseover", e => { const t = target(e); if (t) show(t); });
+  document.addEventListener("mouseout", e => { if (target(e)) hide(); });
+  document.addEventListener("focusin", e => { const t = target(e); if (t) show(t); });
+  document.addEventListener("focusout", e => { if (target(e)) hide(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") hide(); });
+  document.addEventListener("scroll", hide, true);
+}
+
+function buildGlossary() {
+  const dl = document.getElementById("glossary-list");
+  [...TERMS].sort((a, b) => a[0].localeCompare(b[0])).forEach(t => {
+    const dt = document.createElement("dt"); dt.textContent = t[0];
+    const dd = document.createElement("dd"); dd.textContent = t[2];
+    dl.append(dt, dd);
+  });
+}
+
+// ---- levers --------------------------------------------------------------------------------------
+// kind "rate" is a fraction shown as a percent; "count" is a whole number
+const LEVERS = [
+  {group: "Volume", key: "card_activity", label: "Purchases per card (activity)", kind: "factor", max: 5, step: .05, tag: "choice", band: [.14, 1.4],
+   implied: v => "about " + (0.945 * v).toFixed(2) + " purchase attempts per card per day",
+   help: "How often each card buys, as a multiplier. 1.0 is about 0.95 purchase attempts per card per day.",
+   bench: "No single standard exists; it depends on what you count. Reference points (the green band): one global network's 2024 switched transactions (159.4 billion) over its 3.5 billion issued cards is about 0.13 per card per day (many issued cards are inactive and only network-switched transactions count), a multiplier of about 0.14. US card payments per person (Federal Reserve, 2022; my own division, using an assumed population) is about 1.3, a multiplier of about 1.4. The default models an active card.", src: "network annual report; Federal Reserve"},
+  {group: "Fraud", key: "fraud_rate", label: "Cards compromised", kind: "rate", max: .05, step: .0001, tag: "choice",
+   help: "Share of cards that become fraud victims during the window (at least 2 cards when above zero).",
+   bench: "The industry measures fraud as a share of dollar volume, not of cards: about 6.6 bps (0.066%) worldwide in 2023. The default here is deliberately about 13 times higher so a detector has enough cases. See the right-hand panel for the implied share of card volume. For an industry-like feed, use many cards and a small value (the Industry-like preset).", src: "Nilson"},
+  {group: "Fraud", key: "adjudicated_rate", label: "Fraud cases that become chargebacks", kind: "rate", max: 1, step: .01, tag: "choice",
+   help: "Share of fraud cases the issuer later confirms (reason 4837). Only these are adjudicated, so only these are visible to a shop that learns from confirmed fraud.",
+   bench: "No public benchmark found. Real confirmation is partial and slow, which is why this defaults below 100%."},
+  {group: "Valid but odd", key: "base_decline_rate", label: "Authorization decline rate", kind: "rate", max: .5, step: .005, tag: "secondary", band: [.01, .15],
+   help: "Share of authorizations the issuer declines for ordinary reasons (not incidents).",
+   bench: "Vendor figures: card-present approval about 95 to 99% (declines 1 to 5%); online approval about 80 to 92% (declines 8 to 20%); a strong bank averages about 85% approval overall by one vendor. The default 6% sits between in-store and online. Directional only.", src: "Signifyd; Rapyd"},
+  {group: "Valid but odd", key: "dispute_rate", label: "Ordinary sales disputed", kind: "rate", max: .05, step: .0005, tag: "secondary", band: [.001, .01],
+   help: "Share of cleared, non-fraud sales that come back as chargebacks 15 to 60 days later.",
+   bench: "A card network's excessive-chargeback program starts for a merchant at 100 or more chargebacks in a month and a ratio of 1.5% or more (high tier: 300 or more and 3%), per a bank guide. Merchants usually aim to stay under 1%. Our default 0.4% plus fraud chargebacks lands near 0.55% of cleared sales.", src: "bank guide"},
+  {group: "Valid but odd", key: "reversal_timeout_rate", label: "Timeout reversals", kind: "rate", max: .1, step: .001, tag: "choice",
+   help: "Approved sales where the acquirer never got the response, so it reverses in full and nothing clears.",
+   bench: "No public benchmark found. Real timeout rates are small and vary by network health."},
+  {group: "Valid but odd", key: "refund_rate", label: "Later refunds", kind: "rate", max: .2, step: .005, tag: "choice",
+   help: "Share of cleared sales refunded 2 to 10 days later.",
+   bench: "No reliable card-level benchmark found. Retail return rates are much higher than card refund counts, so treat 2% as a plausible placeholder."},
+  {group: "Valid but odd", key: "fallback_rate", label: "Chip fallback (background)", kind: "rate", max: .2, step: .001, tag: "verified", band: [0, .05],
+   help: "Share of chip purchases that fall back to the magnetic stripe at ordinary merchants.",
+   bench: "The network's processing rules cap technical fallback at 5% of chip transactions per location per month (outside China domestic). The default 1% is well inside the cap, and measured fallback overall is about 1.4% once bad readers are included.", src: "Rulebook 4.1 variations"},
+  {group: "Valid but odd", key: "broken_chip_merchants", label: "Bad chip-reader merchants", kind: "count", max: 50, step: 1, tag: "choice",
+   help: "Merchants whose chip reader is faulty, so fallback is high but legitimate. These are look-alikes a detector should not call fraud.",
+   bench: "A count, not a percent. No benchmark; a few per few hundred merchants is plausible."},
+  {group: "Valid but odd", key: "broken_chip_fallback_rate", label: "Fallback at bad-reader merchants", kind: "rate", max: 1, step: .01, tag: "verified", band: [0, .05],
+   help: "How often chip purchases fall back at those merchants.",
+   bench: "Above the 5% cap in the rules, so the rule check will flag these merchants; the answer key marks them benign look-alikes.", src: "Rulebook 4.1 variations"},
+  {group: "Incidents", key: "mapping_break_share", label: "Mapping break severity", kind: "rate", max: 1, step: .01, tag: "choice",
+   help: "Share of the affected acquirer's pay-at-pump transactions that carry the wrong entry mode after the release.",
+   bench: "No benchmark. 70% means most, not all, are wrong, which is typical of a partial rollout."},
+  {group: "Data defects (0 by default)", key: "duplicate_rate", label: "Duplicate requests", kind: "rate", max: .05, step: .0005, tag: "choice",
+   help: "Authorization requests that appear twice with the same trace and STAN.",
+   bench: "No published benchmark. Production defect rates are normally small; raise this when you need enough examples to measure a detector."},
+  {group: "Data defects (0 by default)", key: "missing_terminal_rate", label: "Missing terminal ID", kind: "rate", max: .05, step: .0005, tag: "choice",
+   help: "Card-present requests that lack the terminal ID (DE 41).",
+   bench: "No published benchmark; the field is expected on card-present messages."},
+  {group: "Data defects (0 by default)", key: "amount_mismatch_rate", label: "Clearing above authorization", kind: "rate", max: .05, step: .0005, tag: "verified",
+   help: "Clearings that are 5 to 30% larger than the authorized amount.",
+   bench: "A clearing amount is not expected to exceed the authorization, with regional exceptions such as gratuities (Rulebook 2.5 and 2.8). The rate itself has no benchmark.", src: "Rulebook 2.5 / 2.8"},
+  {group: "Data defects (0 by default)", key: "late_clearing_rate", label: "Late clearing", kind: "rate", max: .05, step: .0005, tag: "verified",
+   help: "Clearings 8 to 12 days after a final authorization.",
+   bench: "Presentment is due within 7 days of a final authorization (30 days for a preauthorization). The rate itself has no benchmark.", src: "Rulebook 3.15.1 / 2.8"},
+  {group: "Data defects (0 by default)", key: "orphan_clearing_rate", label: "Orphan clearing", kind: "rate", max: .05, step: .0005, tag: "choice",
+   help: "Clearings whose authorization is missing from the feed.",
+   bench: "Offline chip and similar cases legitimately clear without a matching online authorization, so a small real rate exists. No benchmark."}
+];
+
+const PRESETS = {
+  "Default": {desc: "What the generator does with no options.", levers: {}},
+  "Clean baseline": {desc: "No fraud, no incidents, no defects. Proves a pipeline passes valid data.",
+    levers: {fraud_rate: 0, incidents: [], broken_chip_merchants: 0}},
+  "Industry-like": {desc: "Fraud near 6.6 bps of volume and a lighter decline rate. Needs many cards, so it is slower and has very few fraud cases.",
+    size: {cards: 10000, merchants: 800}, levers: {fraud_rate: .00035, base_decline_rate: .08}},
+  "Large (10 million)": {desc: "About 10 million messages (116,000 cards for 30 days). Measured: 5.5 minutes on 4 workers, 3.7 GB on disk, under 2 GB of memory.",
+    size: {target: 10000000, merchants: 2000, days: 30}, levers: {}},
+  "Incident drill": {desc: "The five prepared incidents plus a network outage, an acquirer outage and a holiday surge, for practising incident detection.",
+    levers: {custom_incidents: [
+      {type: "acquirer_outage", start_day: 3, start_hour: 10, duration_hours: 4, target: "ACQ01", severity: .9},
+      {type: "network_outage", start_day: 5, start_hour: 2, duration_hours: 1, severity: .95},
+      {type: "holiday_surge", start_day: 8, start_hour: 0, duration_hours: 24, severity: 1.8}]}},
+  "Detector training": {desc: "Plenty of fraud and every defect type at 1%, so a detector has examples to learn from and be scored on.",
+    levers: {fraud_rate: .02, duplicate_rate: .01, missing_terminal_rate: .01, amount_mismatch_rate: .01, late_clearing_rate: .01, orphan_clearing_rate: .01}},
+  "Stress test": {desc: "High noise: many declines, lots of fraud and defects. Tests robustness, not realism.",
+    levers: {fraud_rate: .05, base_decline_rate: .15, dispute_rate: .02, duplicate_rate: .03, missing_terminal_rate: .03, amount_mismatch_rate: .03, late_clearing_rate: .03, orphan_clearing_rate: .03}}
+};
+
+const clone = o => JSON.parse(JSON.stringify(o));
+let S = {size: clone(SIZE_DEFAULTS), lev: clone(DEFAULTS)};
+let fmt = "json";
+let stripSim = false;
+const $ = id => document.getElementById(id);
+const pct = v => +(v * 100).toFixed(4);
+const num0 = v => Math.round(v).toLocaleString();
+
+function el(tag, attrs = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) { if (k === "text") e.textContent = v; else e.setAttribute(k, v); }
+  kids.forEach(c => e.append(c));
+  return e;
+}
+
+function buildLevers() {
+  const host = $("levers"); host.textContent = "";
+  let group = null, card = null;
+  for (const L of LEVERS) {
+    if (L.group !== group) { group = L.group; card = el("section", {class: "card"}, el("h2", {text: group})); host.append(card); }
+    const isRate = L.kind === "rate";
+    const num = el("input", {type: "number", id: "n-" + L.key, "aria-label": L.label, min: 0, step: isRate ? pct(L.step) : (L.kind === "factor" ? L.step : 1)});
+    const rng = el("input", {type: "range", id: "r-" + L.key, "aria-label": L.label + " slider", min: 0, max: L.max, step: L.step});
+    const track = el("div", {class: "track"});
+    if (L.band) track.append(el("div", {class: "band", style: `left:${L.band[0] / L.max * 100}%;width:${(L.band[1] - L.band[0]) / L.max * 100}%`}));
+    track.append(el("div", {class: "tick", title: "default", style: `left:calc(${DEFAULTS[L.key] / L.max * 100}% - 1px)`}), rng);
+    const bench = el("div", {class: "bench"}, el("span", {class: "badge " + L.tag, text: TAG[L.tag]}), " ", L.bench);
+    if (L.src) bench.append(" ", el("span", {class: "src", text: "(" + L.src + ")"}));
+    card.append(el("div", {class: "lever"},
+      el("div", {class: "top"}, el("span", {class: "name", text: L.label}), el("span", {class: "key", text: L.key + " · default " + (isRate ? pct(DEFAULTS[L.key]) + "%" : DEFAULTS[L.key])})),
+      el("div", {class: "help", text: L.help}),
+      ...(L.implied ? [el("div", {class: "help", id: "imp-" + L.key, style: "font-weight:600"})] : []),
+      el("div", {class: "ctl"}, track, el("div", {}, num)),
+      bench));
+    const fromBox = x => isRate ? x / 100 : (L.kind === "factor" ? x : Math.round(x));
+    num.addEventListener("input", () => { if (num.value !== "") { S.lev[L.key] = fromBox(+num.value); sync(); } });
+    rng.addEventListener("input", () => { S.lev[L.key] = isRate ? +rng.value : fromBox(+rng.value); sync(); });
+  }
+}
+
+function buildSize() {
+  const host = $("size"); host.textContent = "";
+  // typing a number of events pins it: cards are recomputed whenever days or settings change, until Cards is edited by hand
+  const target = el("input", {type: "number", id: "s-target", min: 1000, step: 1000, "aria-label": "Events to build"});
+  host.append(el("label", {class: "f", style: "grid-column: 1 / -1"}, "Events (messages) to build: type a number and Cards adjusts to match", target));
+  target.addEventListener("input", () => { if (+target.value >= 1) { S.size.target = Math.max(1000, Math.round(+target.value)); sync(); } });
+  for (const [k, lab, type] of [["seed", "Seed", "number"], ["cards", "Cards", "number"], ["merchants", "Merchants", "number"], ["days", "Days", "number"], ["start", "Start date", "date"]]) {
+    const i = el("input", {type, id: "s-" + k, min: 1}); host.append(el("label", {class: "f"}, lab, i));
+    i.addEventListener("input", () => {
+      S.size[k] = type === "number" ? Math.max(1, Math.round(+i.value || 1)) : i.value;
+      if (k === "cards") delete S.size.target;       // setting cards by hand releases the events target
+      sync();
+    });
+  }
+}
+
+// mirrors cards_for_target() in src/txnforge/levers.py
+function cardsForTarget(target) {
+  const perCard = estimate(100000, S.size.days, S.lev).messages / 100000;
+  return Math.max(2, Math.round(target / perCard));
+}
+
+function buildMix() {
+  const host = $("mix"); host.textContent = "";
+  for (const [k, lab] of Object.entries(PATTERNS)) {
+    const i = el("input", {type: "number", id: "m-" + k, min: 0, step: .5});
+    host.append(el("label", {class: "f"}, lab, i));
+    i.addEventListener("input", () => { S.lev.fraud_mix[k] = Math.max(0, +i.value || 0); sync(); });
+  }
+  const inc = $("incidents"); inc.textContent = "";
+  for (const [k, lab] of Object.entries(INCIDENTS)) {
+    const c = el("input", {type: "checkbox", id: "i-" + k});
+    inc.append(el("label", {}, c, " " + lab));
+    c.addEventListener("change", () => {
+      const on = new Set(S.lev.incidents); c.checked ? on.add(k) : on.delete(k);
+      S.lev.incidents = Object.keys(INCIDENTS).filter(x => on.has(x)); sync();
+    });
+  }
+}
+
+const TARGET_HINT = {issuer: "ISS01 to ISS25", acquirer: "ACQ01 to ACQ08", country: "US, GB or ES", state: "FL, TX, CA, NY, MO, IL or OH", mcc: "4-digit MCC, e.g. 5732", none: ""};
+const TARGET_LABEL = {issuer: "Issuer", acquirer: "Acquirer", country: "Country", state: "US state", mcc: "Merchant category (MCC)"};
+
+function incidentWhen(c) {
+  const s = Math.round((c.start_day || 0) * 24 + (c.start_hour || 0)), e = s + Math.round(c.duration_hours || 4);
+  const f = h => "day " + (Math.floor(h / 24) + 1) + ", " + String(h % 24).padStart(2, "0") + ":00";
+  return f(s) + " to " + f(e);
+}
+
+function newIncident(type) {
+  return {type, start_day: 2, start_hour: 10, duration_hours: 4, severity: INCIDENT_INFO[type].severity.default};
+}
+
+function buildCustom() {
+  const host = $("custom-rows"); host.textContent = "";
+  S.lev.custom_incidents.forEach((c, i) => {
+    const info = INCIDENT_INFO[c.type], sev = info.severity;
+    const sel = el("select", {"aria-label": "Incident type"});
+    for (const [k, v] of Object.entries(INCIDENT_INFO)) sel.append(el("option", Object.assign({value: k, text: v.label}, k === c.type ? {selected: ""} : {})));
+    sel.addEventListener("change", () => {
+      S.lev.custom_incidents[i] = Object.assign(newIncident(sel.value), {start_day: c.start_day, start_hour: c.start_hour, duration_hours: c.duration_hours});
+      buildCustom(); sync();
+    });
+    const when = el("div", {class: "when", text: incidentWhen(c)});
+    const num = (label, key, min, max, step) => {
+      const i2 = el("input", {type: "number", min, step, "aria-label": label}); if (max !== null) i2.setAttribute("max", max);
+      i2.value = c[key];
+      i2.addEventListener("input", () => { c[key] = +i2.value; when.textContent = incidentWhen(c); sync(); });
+      return el("label", {class: "f"}, label, i2);
+    };
+    const fields = el("div", {class: "fields"}, el("label", {class: "f"}, "Type", sel),
+      num("Start day (0 is the first)", "start_day", 0, null, 1), num("Start hour (0 to 23)", "start_hour", 0, 23, 1),
+      num("Lasts (hours)", "duration_hours", 1, null, 1));
+    if (info.target !== "none") {
+      const t = el("input", {type: "text", placeholder: info.target_default || TARGET_HINT[info.target], "aria-label": TARGET_LABEL[info.target]});
+      t.value = c.target || "";
+      t.addEventListener("input", () => { t.value.trim() ? c.target = t.value.trim() : delete c.target; sync(); });
+      fields.append(el("label", {class: "f"}, TARGET_LABEL[info.target] + (info.target_default ? "" : " (blank = any)"), t));
+    }
+    fields.append(num(sev.label, "severity", sev.min, sev.max, sev.step));
+    const remove = el("button", {text: "Remove", "aria-label": "Remove this incident"});
+    remove.addEventListener("click", () => { S.lev.custom_incidents.splice(i, 1); buildCustom(); sync(); });
+    host.append(el("div", {class: "inc"}, fields, when, el("p", {class: "help", text: info.help}), el("div", {class: "row"}, remove)));
+  });
+  if (!S.lev.custom_incidents.length) host.append(el("p", {class: "note", text: "None yet. The prepared incidents above still apply."}));
+  enrich(host);
+}
+
+function validate() {
+  const errs = [], v = S.lev;
+  v.custom_incidents.forEach((c, i) => {
+    const sev = INCIDENT_INFO[c.type].severity, n = "Incident " + (i + 1) + " (" + INCIDENT_INFO[c.type].label + ")";
+    if (!(c.start_hour >= 0 && c.start_hour < 24)) errs.push(n + ": start hour must be 0 to 23");
+    if (!(c.duration_hours > 0)) errs.push(n + ": it must last at least 1 hour");
+    if (!(c.start_day >= 0)) errs.push(n + ": start day cannot be negative");
+    if (!(c.severity >= sev.min && c.severity <= sev.max)) errs.push(n + ": " + sev.label.toLowerCase() + " must be between " + sev.min + " and " + sev.max);
+    if (c.start_day >= S.size.days) errs.push(n + " starts after the last day of the run (" + S.size.days + " days)");
+  });
+  for (const L of LEVERS) if (L.kind === "rate" && !(v[L.key] >= 0 && v[L.key] <= 1)) errs.push(`${L.key} must be between 0 and 100%`);
+  if (v.broken_chip_merchants < 0) errs.push("broken_chip_merchants cannot be negative");
+  if (!(v.card_activity > 0 && v.card_activity <= 10)) errs.push("card_activity must be above 0 and at most 10");
+  if (v.fraud_rate > 0 && Object.values(v.fraud_mix).reduce((a, b) => a + b, 0) <= 0) errs.push("fraud patterns need at least one weight above zero");
+  return errs;
+}
+
+function outputs() {
+  const lv = clone(S.lev), s = S.size;
+  const json = JSON.stringify(lv, null, 2);
+  const cli = `txnforge generate --out out/run1 --seed ${s.seed} ${s.target ? "--target-messages " + s.target : "--cards " + s.cards} --merchants ${s.merchants} --days ${s.days} --start ${s.start} --workers 4${stripSim ? " --strip-sim" : ""} --levers levers.json`;
+  const py = `from txnforge import generate\n\nresult = generate(\n    seed=${s.seed}, cards=${s.cards}, merchants=${s.merchants}, days=${s.days}, start="${s.start}",\n    levers=${JSON.stringify(lv, null, 4).replace(/\n/g, "\n    ")},\n    out_dir="out/run1", workers=4,${stripSim ? " strip_sim=True," : ""}\n)\nprint(result["manifest"]["label_counts"])`;
+  return {json, cli, py};
+}
+
+// mirrors estimate() in src/txnforge/levers.py; a test keeps the coefficients identical
+function estimate(cards, days, v) {
+  const e = ESTIMATE;
+  const requests = cards * days * e.requests_per_card_day * v.card_activity;
+  const approved = requests * (1 - v.base_decline_rate);
+  const clearings = approved * (e.clear_base - e.clear_per_timeout * v.reversal_timeout_rate);
+  const reversals = approved * (e.reversal_base + e.reversal_per_timeout * v.reversal_timeout_rate);
+  const refunds = v.refund_rate * clearings * e.refund_share;
+  const compromised = v.fraud_rate > 0 ? Math.max(2, Math.floor(cards * v.fraud_rate)) : 0;
+  const weight = Object.values(v.fraud_mix).reduce((a, b) => a + b, 0) || 1;
+  let perCard = 0;
+  for (const [p, w] of Object.entries(v.fraud_mix)) { const m = e.fraud_msgs[p]; perCard += w * (m[0] + v.adjudicated_rate * (m[1] - m[0])); }
+  const fraud = compromised * perCard / weight;
+  const chargebacks = v.dispute_rate * clearings;
+  const duplicates = v.duplicate_rate * (requests + refunds);
+  const orphans = v.orphan_clearing_rate * clearings * e.orphan_share;
+  const parts = {"Authorizations (request + response)": 2 * (requests + refunds) - 2 * orphans, "Clearings": clearings,
+                 "Reversals": reversals, "Chargebacks": chargebacks, "Fraud cases (all messages)": fraud, "Duplicates": duplicates};
+  const messages = Object.values(parts).reduce((a, b) => a + b, 0);
+  return {messages, transactions: requests + refunds + fraud / 2.6, compromised, parts};
+}
+
+// mirrors run_cost() in src/txnforge/levers.py
+function runCost(messages) {
+  const e = ESTIMATE, groups = Math.max(1, Math.ceil(messages / e.group_messages)), workers = Math.min(e.max_workers, groups);
+  const rate = e.messages_per_second * (workers === 1 ? 1 : workers * e.parallel_efficiency);
+  return {groups, workers, seconds: messages / rate, diskGb: messages * e.disk_bytes_per_message / 1e9, ramGb: workers * e.ram_gb_per_worker};
+}
+
+function readableTime(sec) {
+  if (sec < 90) return "about " + Math.max(1, Math.round(sec)) + " seconds";
+  return sec < 5400 ? "about " + Math.round(sec / 60) + " minutes" : "about " + (sec / 3600).toFixed(1) + " hours";
+}
+
+function estimates() {
+  const s = S.size, v = S.lev, est = estimate(s.cards, s.days, v);
+  const bps = est.compromised / s.cards * FRAUD_BPS_PER_COMPROMISED_SHARE;
+  $("se-msgs").textContent = "≈ " + num0(est.messages);
+  $("se-txns").textContent = num0(est.transactions);
+  const cost = runCost(est.messages);
+  $("se-time").textContent = readableTime(cost.seconds) + " on " + cost.workers + " worker" + (cost.workers > 1 ? "s" : "") +
+    " (author's PC) · " + (cost.diskGb < 1 ? Math.round(cost.diskGb * 1000) + " MB" : cost.diskGb.toFixed(1) + " GB") +
+    " on disk · about " + Math.max(0.5, cost.ramGb).toFixed(1) + " GB of memory";
+  const host = $("se-parts"); host.textContent = "";
+  const entries = Object.entries(est.parts).filter(([, n]) => n >= 0.5), top = Math.max(...entries.map(e => e[1]), 1);
+  for (const [name, n] of entries) {
+    const bar = el("div", {class: "bar"}, el("i", {style: `width:${n / top * 100}%`}));
+    host.append(el("div", {class: "part"}, el("span", {text: name}), bar, el("b", {text: num0(n)})));
+  }
+  $("est-msgs").textContent = "about " + num0(est.messages);
+  $("est-txns").textContent = "about " + num0(est.transactions);
+  $("est-cards").textContent = est.compromised.toLocaleString() + " of " + s.cards.toLocaleString();
+  $("est-bps").textContent = est.compromised ? "about " + bps.toFixed(bps < 10 ? 1 : 0) : "0";
+  let note = "";
+  if (est.messages > 20000000) note += "Beyond about 20 million messages the output is tens of GB; check free disk space first. ";
+  if (s.merchants < 100) note += "With fewer than about 100 merchants some purchases find no shop and are skipped, so the count runs low. ";
+  if (est.compromised && est.compromised <= 5) note += "Only " + est.compromised + " compromised card(s): too few fraud cases to measure a detector with.";
+  $("se-note").textContent = note;
+  $("est-note").textContent = "Fraud share comes from the default feed and moves with the fraud mix and population.";
+}
+
+function sync() {
+  if (S.size.target) S.size.cards = cardsForTarget(S.size.target);
+  const errs = validate();
+  const o = outputs();
+  $("out").textContent = o[fmt];
+  $("errs").textContent = errs.join(" · ");
+  for (const L of LEVERS) {
+    const isRate = L.kind === "rate", val = S.lev[L.key];
+    const n = $("n-" + L.key), r = $("r-" + L.key);
+    if (document.activeElement !== n) n.value = isRate ? pct(val) : val;
+    r.value = val;
+    if (L.implied) $("imp-" + L.key).textContent = "= " + L.implied(val);
+  }
+  for (const k of Object.keys(PATTERNS)) { const i = $("m-" + k); if (document.activeElement !== i) i.value = S.lev.fraud_mix[k]; }
+  for (const k of Object.keys(INCIDENTS)) $("i-" + k).checked = S.lev.incidents.includes(k);
+  for (const k of Object.keys(SIZE_DEFAULTS)) { const i = $("s-" + k); if (document.activeElement !== i) i.value = S.size[k]; }
+  const tgt = $("s-target");
+  if (document.activeElement !== tgt) tgt.value = S.size.target || Math.round(estimate(S.size.cards, S.size.days, S.lev).messages / 100) * 100;
+  estimates();
+}
+
+function applyPreset(name) {
+  const p = PRESETS[name];
+  S = {size: Object.assign(clone(SIZE_DEFAULTS), p.size || {}), lev: Object.assign(clone(DEFAULTS), clone(p.levers))};
+  $("preset-desc").textContent = name + ": " + p.desc;
+  buildCustom(); sync();
+}
+
+function buildChrome() {
+  const host = $("presets");
+  for (const name of Object.keys(PRESETS)) { const b = el("button", {text: name}); b.addEventListener("click", () => applyPreset(name)); host.append(b); }
+  host.after(el("p", {class: "note", id: "preset-desc", style: "margin:0 0 6px"}));
+  const tabs = $("tabs");
+  for (const [k, lab] of [["json", "levers.json"], ["cli", "Command"], ["py", "Python"]]) {
+    const b = el("button", {text: lab, "aria-pressed": k === fmt}); b.dataset.k = k;
+    b.addEventListener("click", () => { fmt = k; tabs.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x.dataset.k === k)); sync(); });
+    tabs.append(b);
+  }
+  $("copy").addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText($("out").textContent); $("copy").textContent = "Copied"; }
+    catch (e) { const r = document.createRange(); r.selectNodeContents($("out")); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); $("copy").textContent = "Selected; press Ctrl+C"; }
+    setTimeout(() => $("copy").textContent = "Copy", 1800);
+  });
+  $("download").addEventListener("click", () => {
+    const a = el("a", {href: URL.createObjectURL(new Blob([outputs().json + "\n"], {type: "application/json"})), download: "levers.json"});
+    document.body.append(a); a.click(); a.remove();
+  });
+  $("load").addEventListener("change", async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try {
+      const data = JSON.parse(await f.text()), bad = Object.keys(data).filter(k => !(k in DEFAULTS));
+      S.lev = Object.assign(clone(DEFAULTS), data);
+      S.lev.fraud_mix = Object.assign(Object.fromEntries(Object.keys(PATTERNS).map(k => [k, 0])), S.lev.fraud_mix);
+      $("preset-desc").textContent = "Loaded " + f.name + (bad.length ? " (ignored unknown levers: " + bad.join(", ") + ")" : "");
+      buildCustom(); sync();
+    } catch (err) { $("errs").textContent = "Could not read that file: " + err.message; }
+    e.target.value = "";
+  });
+}
+
+$("s-strip").addEventListener("change", e => { stripSim = e.target.checked; sync(); });
+buildChrome(); buildSize(); buildLevers(); buildMix(); buildGlossary(); applyPreset("Default");
+$("add-incident").addEventListener("click", () => { S.lev.custom_incidents.push(newIncident("acquirer_outage")); buildCustom(); sync(); });
+enrich(document.body); setupTooltip();
+</script>
+</body>
+</html>
