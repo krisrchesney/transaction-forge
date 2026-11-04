@@ -73,3 +73,15 @@ def test_designer_output_is_accepted_by_python():
 def test_designer_lets_you_type_a_number_of_events():
     text = PAGE.read_text(encoding="utf-8")
     assert 'id: "s-target"' in text and "--target-messages" in text and "function cardsForTarget" in text
+
+
+def test_sample_data_is_small_masked_and_stripped():
+    text = PAGE.read_text(encoding="utf-8")
+    block = re.search(r"/\*SAMPLE\*/\s*const SAMPLE = (\{.*?\});\s*/\*END SAMPLE\*/", text, re.S)
+    sample = json.loads(block.group(1))
+    messages = [m for ex in sample["examples"] for m in ex["messages"]]
+    assert 5 <= len(sample["examples"]) <= 15 and len(messages) <= 100        # a sample, not the full file
+    assert all(ex["story"] and ex["watch"] and ex["messages"] for ex in sample["examples"])
+    assert not re.search(r"\d{16}", block.group(1))                            # card numbers are masked
+    assert all("sim" not in m and "sim_issuer" not in m["de"] for m in messages)
+    assert all(re.fullmatch(r"\d{6}\*+\d{4}", m["de"]["2"]) for m in messages if m["de"].get("2"))
