@@ -85,3 +85,37 @@ def test_sample_data_is_small_masked_and_stripped():
     assert not re.search(r"\d{16}", block.group(1))                            # card numbers are masked
     assert all("sim" not in m and "sim_issuer" not in m["de"] for m in messages)
     assert all(re.fullmatch(r"\d{6}\*+\d{4}", m["de"]["2"]) for m in messages if m["de"].get("2"))
+
+
+def test_browser_preview_copies_match_the_source():
+    """The page loads these copies into Pyodide; run tools/sync_pages_py.py if this fails."""
+    import sys
+    root = Path(__file__).resolve().parents[1]
+    sys.path.insert(0, str(root / "tools"))
+    from sync_pages_py import MODULES
+    for name in MODULES:
+        src = (root / "src" / "txnforge" / name).read_bytes().replace(b"\r\n", b"\n")
+        assert (root / "docs" / "py" / "txnforge" / name).read_bytes().replace(b"\r\n", b"\n") == src, name
+    page = PAGE.read_text(encoding="utf-8")
+    assert all(f'"{name}"' in page for name in MODULES)                        # the page fetches every module
+
+
+def test_browser_preview_returns_masked_stripped_mixed_cases():
+    import importlib.util
+    root = Path(__file__).resolve().parents[1]
+    spec = importlib.util.spec_from_file_location("preview_glue", root / "docs" / "py" / "preview_glue.py")
+    glue = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(glue)
+    levers = Levers().as_dict()
+    levers.update(fraud_rate=.03, dispute_rate=.03, duplicate_rate=.01)
+    out = json.loads(glue.preview(json.dumps(levers), 5, 5000, 400, 30, "2026-03-02"))   # caps must apply
+    s = out["summary"]
+    assert s["cards"] == glue.MAX_CARDS and s["days"] == glue.MAX_DAYS and s["merchants"] == glue.MAX_MERCHANTS
+    cases = out["cases"]
+    assert 8 <= len(cases) <= glue.ORDINARY_CASES + glue.MAX_LABELLED_CASES
+    assert any(c["labels"] for c in cases) and any(not c["labels"] for c in cases)    # mixed
+    text = json.dumps(cases)
+    assert not re.search(r"\d{16}", text) and "sim_issuer" not in text and '"sim"' not in text
+    assert all(re.fullmatch(r"\d{6}\*+\d{4}", m["de"]["2"]) for c in cases for m in c["messages"] if m["de"].get("2"))
+    assert all(i["start"] < "2026-03-09T00:00:00Z" for i in s["incidents"])
+    assert len(out["feed"]) == s["messages"] and out["key"]

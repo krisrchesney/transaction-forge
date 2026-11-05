@@ -83,6 +83,10 @@ input[type=number], input[type=text], input[type=date] {
 .msgs td.n { text-align: right; font-variant-numeric: tabular-nums; }
 .keybox { background: var(--bg); border: 1px dashed var(--line); border-radius: 8px; padding: 8px 12px; margin-top: 8px; font-size: 13px; }
 .keybox ul { margin: 4px 0 0; padding-left: 18px; }
+[hidden] { display: none !important; }
+.pvcase { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; margin: 10px 0; }
+.pvcase h3 { margin: 0; font-size: 14px; }
+.pvcase .row { margin-top: 6px; }
 .side { position: sticky; top: 12px; }
 @media (max-width: 900px) { .side { position: static; } }
 .tabs { display: flex; gap: 6px; margin-bottom: 8px; }
@@ -110,8 +114,8 @@ a { color: var(--accent); }
 <header>
   <h1>Transaction Forge: Event Builder</h1>
   <p class="lede">Choose how big the dataset is and how many oddities it contains. The page writes the exact settings file (levers.json), command or Python call for <code>txnforge</code>. Green bands show a typical or expected range where one exists; every note says where the number comes from and how far to trust it. Dotted-underlined words are industry terms: hover, tap or tab to them for a definition, or see the glossary at the bottom.</p>
-  <nav class="jump" aria-label="Sections"><a href="#sample-data">Sample data</a><a href="#build">Build your own</a><a href="#glossary-card">Glossary</a></nav>
-  <p class="howto"><b>How this works.</b> This page does not generate data itself: it writes the settings and the command. To run it you need Python 3.10 or newer: <code>pip install git+https://github.com/krisrchesney/transaction-forge.git</code>, save the settings as <code>levers.json</code>, then paste the command. A hand-picked sample of what comes out is just below.</p>
+  <nav class="jump" aria-label="Sections"><a href="#sample-data">Sample data</a><a href="#build">Build your own</a><a href="#preview-launch">Preview</a><a href="#glossary-card">Glossary</a></nav>
+  <p class="howto"><b>How this works.</b> Choose settings below and press <b>Generate a preview</b> to see a small sample made by the real generator, right in your browser, with each case's answer hidden until you reveal it. Full-size runs (up to millions of messages) happen on your own computer: the page writes the settings and the command. To run it you need Python 3.10 or newer: <code>pip install git+https://github.com/krisrchesney/transaction-forge.git</code>, save the settings as <code>levers.json</code>, then paste the command. A hand-picked sample of what comes out is just below.</p>
 </header>
 <div style="max-width:1180px;margin:0 auto;padding:0 16px">
   <section class="card" id="sample-data">
@@ -160,6 +164,13 @@ a { color: var(--accent); }
     </section>
   </div>
   <aside class="side">
+    <section class="card" id="preview-launch">
+      <h2>Preview your settings</h2>
+      <p class="note" style="margin:0 0 8px">Generates a small sample right here in the page, with the real generator and the settings you chose, and shows it the way a detector would see it. What each case is stays hidden until you reveal it.</p>
+      <div class="row"><button class="primary" id="pv-go">Generate a preview</button></div>
+      <p class="note" id="pv-status" aria-live="polite"></p>
+      <p class="note">The first use downloads a Python interpreter (about 10 MB, from a public CDN, then cached). Your settings never leave the page. The preview keeps your rates but caps the run at 600 cards and 3 to 7 days, so rare events are fewer than in a full run.</p>
+    </section>
     <section class="card">
       <h2>Output</h2>
       <div class="tabs" id="tabs" role="group" aria-label="Output format"></div>
@@ -182,6 +193,12 @@ a { color: var(--accent); }
     </section>
   </aside>
 </main>
+<div style="max-width:1180px;margin:0 auto;padding:0 16px">
+  <section class="card" id="preview-card" hidden>
+    <h2>Your preview</h2>
+    <div id="preview-body"></div>
+  </section>
+</div>
 <footer style="max-width:1180px;margin:0 auto;padding:0 16px 28px">
   <p><b>How to read the tags.</b> <span class="badge verified">Network rules</span> the number is stated in the card network's published processing rules, which this project cites. <span class="badge secondary">Secondary source</span> the number comes from a vendor, bank or trade source, not from the network's own rules; check the current primary document before quoting it. <span class="badge choice">Our choice</span> no public benchmark was found; the default is a modelling choice, picked so the data looks plausible. Figures change; these were gathered on 2026-11-04.</p>
   <p>Sources:
@@ -681,14 +698,18 @@ function labelText(l) {
   return l.kind;
 }
 
+function msgTable(messages) {
+  const traces = [...new Set(messages.map(m => (m.de["48"] || {})["63"]))];
+  const head = ["When (UTC)", "Message", "Amount", "Merchant · category", "How read", "Result", "Trace"];
+  return el("table", {class: "msgs"}, el("thead", {}, el("tr", {}, ...head.map(h => el("th", {text: h})))),
+    el("tbody", {}, ...messages.map(m => messageRow(m, "hsl(" + (traces.indexOf((m.de["48"] || {})["63"]) * 70 + 210) % 360 + ",60%,55%)"))));
+}
+
 function showSample(i) {
   const ex = SAMPLE.examples[i], body = $("sample-body");
   $("sample-chips").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.i === i)));
   body.textContent = "";
-  const traces = [...new Set(ex.messages.map(m => (m.de["48"] || {})["63"]))];
-  const head = ["When (UTC)", "Message", "Amount", "Merchant · category", "How read", "Result", "Trace"];
-  const table = el("table", {class: "msgs"}, el("thead", {}, el("tr", {}, ...head.map(h => el("th", {text: h})))),
-    el("tbody", {}, ...ex.messages.map(m => messageRow(m, "hsl(" + (traces.indexOf((m.de["48"] || {})["63"]) * 70 + 210) % 360 + ",60%,55%)"))));
+  const table = msgTable(ex.messages);
   const keys = ex.labels.length ? ex.labels.map(l => el("li", {text: labelText(l) + " (trace " + l.trace.slice(0, 6) + ")"}))
     : [el("li", {text: "No label: this is ordinary, valid traffic."})];
   const raw = el("pre", {text: ex.messages.map(m => JSON.stringify(m)).join("\n")});
@@ -713,6 +734,104 @@ function buildSample() {
     b.addEventListener("click", () => showSample(i)); chips.append(b);
   });
   showSample(0);
+}
+
+// ---- live preview: the real generator, run in the browser with Pyodide ----------------------------------
+const PYODIDE_URL = "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/";
+const PY_FILES = ["__init__.py", "generator.py", "levers.py", "rules.py", "validator.py"];
+let pyReady = null, preview = null, seedBump = 0;
+
+function loadPython(status) {
+  if (pyReady) return pyReady;
+  pyReady = (async () => {
+    status("Downloading the Python interpreter (about 10 MB, first time only)…");
+    await new Promise((ok, bad) => {
+      const s = el("script", {src: PYODIDE_URL + "pyodide.js"});
+      s.onload = ok; s.onerror = () => bad(new Error("could not load the interpreter (offline, or the CDN is blocked)"));
+      document.head.append(s);
+    });
+    const py = await loadPyodide({indexURL: PYODIDE_URL});
+    status("Loading the generator…");
+    py.FS.mkdirTree("/home/pyodide/txnforge");
+    for (const f of PY_FILES) {
+      const r = await fetch("py/txnforge/" + f);
+      if (!r.ok) throw new Error("could not fetch " + f + " (open this page from a web server, not a file)");
+      py.FS.writeFile("/home/pyodide/txnforge/" + f, await r.text());
+    }
+    py.runPython("import sys; sys.path.insert(0, '/home/pyodide')");
+    const g = await fetch("py/preview_glue.py");
+    if (!g.ok) throw new Error("could not fetch preview_glue.py");
+    py.runPython(await g.text());
+    return py;
+  })().catch(e => { pyReady = null; throw e; });
+  return pyReady;
+}
+
+async function runPreview(reroll) {
+  const status = t => { $("pv-status").textContent = t; };
+  if (validate().length) { status("Fix the problem shown under Output first."); return; }
+  const btn = $("pv-go"); btn.disabled = true;
+  try {
+    if (reroll) seedBump++;
+    const py = await loadPython(status);
+    status("Generating…");
+    await new Promise(r => setTimeout(r, 30));
+    const s = S.size, fn = py.globals.get("preview");
+    preview = JSON.parse(fn(JSON.stringify(S.lev), s.seed + seedBump, s.cards, s.merchants, s.days, s.start));
+    fn.destroy();
+    showPreview();
+    status("Done. Scroll down to Your preview.");
+  } catch (e) { status("Preview failed: " + e.message); }
+  finally { btn.disabled = false; }
+}
+
+function keyLines(labels) {
+  if (!labels.length) return ["No label: this is ordinary, valid traffic."];
+  const counts = new Map();
+  labels.forEach(l => { const t = labelText(l); counts.set(t, (counts.get(t) || 0) + 1); });
+  return [...counts].map(([t, n]) => n > 1 ? t + " (" + n + " purchases in this case)" : t);
+}
+
+function saveText(name, lines) {
+  const a = el("a", {href: URL.createObjectURL(new Blob([lines.join("\n") + "\n"], {type: "application/json"})), download: name});
+  document.body.append(a); a.click(); a.remove();
+}
+
+function showPreview() {
+  const p = preview, sum = p.summary, host = $("preview-body");
+  $("preview-card").hidden = false; host.textContent = "";
+  host.append(el("p", {style: "margin:0 0 6px", text: "Generated " + num0(sum.messages) + " messages (" + num0(sum.purchases) + " purchases) from " + num0(sum.cards) + " cards over " + sum.days +
+    " days in " + sum.seconds + " s, with your settings. Below are " + p.cases.length + " cases picked from it, ordinary purchases mixed in with cases the answer key would label, in time order. Each is shown the way a detector would see it. Which ones are odd, and why? Press Reveal to check."}));
+  const totals = el("div", {class: "keybox", hidden: ""});
+  const counts = Object.entries(sum.label_counts);
+  totals.append(el("b", {text: "Answer key for this whole preview run"}), el("ul", {},
+    ...(counts.length ? counts.map(([k, n]) => el("li", {text: k.replace(/[:_]/g, " ") + ": " + n})) : [el("li", {text: "No labelled cases in this run."})]),
+    ...sum.incidents.map(i => el("li", {text: i.id + " " + i.type.replace(/_/g, " ") + ", " + i.start.slice(5, 16).replace("T", " ") + " to " + i.end.slice(5, 16).replace("T", " ") + " UTC: " + i.effect})),
+    ...(sum.merchant_notes ? [el("li", {text: sum.merchant_notes + " merchant(s) behave oddly but legitimately (look-alikes that are not fraud)."})] : [])));
+  const keys = [];
+  const reveal = el("button", {class: "primary", text: "Reveal all answers"});
+  let shown = false;
+  reveal.addEventListener("click", () => {
+    shown = !shown; reveal.textContent = shown ? "Hide all answers" : "Reveal all answers";
+    totals.hidden = !shown; keys.forEach(k => k(shown));
+  });
+  const again = el("button", {text: "Another sample"}); again.addEventListener("click", () => runPreview(true));
+  const dl1 = el("button", {text: "Download the messages (JSON lines)"}); dl1.addEventListener("click", () => saveText("preview-messages.jsonl", p.feed));
+  const dl2 = el("button", {text: "Download the answer key"}); dl2.addEventListener("click", () => saveText("preview-answer-key.jsonl", p.key));
+  host.append(el("div", {class: "row"}, reveal, again, dl1, dl2), totals);
+  p.cases.forEach(c => {
+    const box = el("div", {class: "keybox", hidden: ""}, el("b", {text: "What the answer key says"}), el("ul", {}, ...keyLines(c.labels).map(t => el("li", {text: t}))));
+    const btn = el("button", {text: "Reveal"});
+    const set = on => { box.hidden = !on; btn.textContent = on ? "Hide" : "Reveal"; };
+    btn.addEventListener("click", () => set(box.hidden));
+    keys.push(set);
+    const first = c.messages[0], loc = first.de["43"] || {};
+    host.append(el("div", {class: "pvcase"},
+      el("h3", {text: "Case " + c.n + " · " + c.messages.length + " messages · card " + (first.de["2"] || "") + " · " + (loc.country || "")}),
+      el("div", {class: "tablewrap"}, msgTable(c.messages)), el("div", {class: "row"}, btn), box));
+  });
+  enrich(host);
+  $("preview-card").scrollIntoView({behavior: "smooth", block: "start"});
 }
 
 function buildChrome() {
@@ -750,6 +869,7 @@ function buildChrome() {
 $("s-strip").addEventListener("change", e => { stripSim = e.target.checked; sync(); });
 buildChrome(); buildSize(); buildLevers(); buildMix(); buildGlossary(); applyPreset("Default");
 $("add-incident").addEventListener("click", () => { S.lev.custom_incidents.push(newIncident("acquirer_outage")); buildCustom(); sync(); });
+$("pv-go").addEventListener("click", () => runPreview(false));
 buildSample(); enrich(document.body); setupTooltip();
 </script>
 </body>
