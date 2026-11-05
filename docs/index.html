@@ -120,14 +120,66 @@ a { color: var(--accent); }
 #glossary-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 4px 24px; margin: 0; }
 #glossary-list dt { font-weight: 600; margin-top: 8px; }
 #glossary-list dd { margin: 0; color: var(--muted); font-size: 13px; }
+
+/* ---- look ---- */
+:root { --accent: #4f46e5; --accent2: #0ea5a4; --hero1: #111c3a; --hero2: #3b2fa8; --hero3: #0f8b8d;
+  --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 8px 24px rgba(16, 24, 40, .07); --bar: #6366f1; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --accent: #8b8cf7; --accent2: #2dd4bf; --hero1: #0b1228; --hero2: #2a2186; --hero3: #0b6264;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25); --bar: #6366f1; } }
+body { background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 9%, var(--bg)) 0, var(--bg) 360px) no-repeat, var(--bg); }
+.hero { background: linear-gradient(115deg, var(--hero1), var(--hero2) 58%, var(--hero3)); color: #fff; margin-bottom: 18px; }
+.hero header { padding-top: 30px; padding-bottom: 18px; }
+.hero h1 { font-size: 30px; letter-spacing: -.02em; color: #fff; margin-bottom: 6px; }
+.hero .lede { color: rgba(255, 255, 255, .8); margin-bottom: 14px; font-size: 16px; }
+.hero .tabbar { margin: 0; }
+.hero .tabbar button { background: rgba(255, 255, 255, .12); border-color: rgba(255, 255, 255, .28); color: #fff; padding: 7px 18px; }
+.hero .tabbar button:hover { background: rgba(255, 255, 255, .22); }
+.hero .tabbar button[aria-pressed=true] { background: #fff; color: var(--hero2); border-color: #fff; font-weight: 600; }
+header, main, .wrap { max-width: 1240px; }
+.card { border-radius: 14px; border-color: transparent; box-shadow: var(--shadow); padding: 16px 18px; }
+.card h2 { display: flex; align-items: center; gap: 8px; color: var(--ink); font-size: 13px; letter-spacing: .06em; }
+.card h2::before { content: ""; width: 4px; height: 15px; border-radius: 2px; background: var(--accent); }
+.card h2[data-g^="Volume"]::before { background: #0ea5e9; }
+.card h2[data-g^="Fraud"]::before { background: #e11d48; }
+.card h2[data-g^="Valid"]::before { background: #16a34a; }
+.card h2[data-g^="Incidents"]::before { background: #f59e0b; }
+.card h2[data-g^="Data"]::before { background: #8b5cf6; }
+button { transition: background .15s, border-color .15s, transform .1s; }
+button:hover { transform: translateY(-1px); }
+button.primary { background: linear-gradient(120deg, var(--accent), color-mix(in srgb, var(--accent) 60%, var(--accent2))); border: 0; padding: 8px 16px; font-weight: 600; }
+.presets { gap: 8px; margin: 4px 0 6px; }
+.presets button, .chips button { border-radius: 999px; padding: 6px 14px; }
+#presets button[aria-pressed=true] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+#preset-desc { margin: 0 0 14px !important; font-size: 13px; }
+.sizeest .big { font-size: 42px; line-height: 1.1; letter-spacing: -.02em; background: linear-gradient(90deg, var(--accent), var(--accent2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.sizeest .big small { -webkit-text-fill-color: var(--muted); font-size: 14px; letter-spacing: 0; }
+.part .bar { height: 10px; border-radius: 5px; }
+.part .bar i { background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 5px; }
+.lever .name { font-size: 15px; }
+.track input[type=range] { accent-color: var(--accent); }
+.stat { padding: 6px 0; border-bottom: 1px solid var(--line); }
+.stat:last-of-type { border-bottom: 0; }
+pre { border-radius: 10px; }
+.msgs { font-size: 13px; }
+.msgs th { background: color-mix(in srgb, var(--accent) 6%, var(--panel)); position: sticky; top: 0; }
+.msgs tbody tr:hover { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.pill { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; background: color-mix(in srgb, currentColor 14%, transparent); }
+.pill.p0100, .pill.p0200 { color: #2563eb; } .pill.p0110, .pill.p0210 { color: #0d9488; }
+.pill.p0400, .pill.p0410 { color: #d97706; } .pill.p1240 { color: #7c3aed; } .pill.p1442 { color: #dc2626; }
+.pvcase { border-radius: 12px; border-color: transparent; box-shadow: var(--shadow); background: var(--panel); padding: 10px 14px; }
+.pvcase h3 { font-size: 13px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.keybox { border-radius: 10px; border-style: solid; border-left: 4px solid var(--accent2); }
+.chips button[aria-pressed=true] { box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 40%, transparent); }
 </style>
 </head>
 <body>
+<div class="hero">
 <header>
   <h1>Transaction Forge: Event Builder</h1>
   <p class="lede">Set the size and the oddities, preview the events, copy the command.</p>
   <div class="seg tabbar" id="pagetabs" role="group" aria-label="Page"><button data-tab="build" aria-pressed="true">Build</button><button data-tab="examples" aria-pressed="false">Examples</button><button data-tab="glossary" aria-pressed="false">Glossary</button></div>
 </header>
+</div>
 <div class="wrap" id="tab-examples" hidden>
   <section class="card">
     <div class="bar2"><div class="chips grow" id="sample-chips" role="group" aria-label="Examples" style="margin:0"></div><div id="sample-view"></div></div>
@@ -147,7 +199,7 @@ a { color: var(--accent); }
 </footer>
 </div>
 <div id="tab-build">
-<div class="presets" id="presets" role="group" aria-label="Presets" style="max-width:1180px;margin:0 auto;padding:0 16px"></div>
+<div class="wrap" style="padding-bottom:0"><div class="presets" id="presets" role="group" aria-label="Presets"></div></div>
 <main class="layout">
   <div>
     <section class="card">
@@ -442,7 +494,7 @@ function buildLevers() {
   const host = $("levers"); host.textContent = "";
   let group = null, card = null;
   for (const L of LEVERS) {
-    if (L.group !== group) { group = L.group; card = el("section", {class: "card"}, el("h2", {text: group})); host.append(card); }
+    if (L.group !== group) { group = L.group; card = el("section", {class: "card"}, el("h2", {text: group, "data-g": group})); host.append(card); }
     const isRate = L.kind === "rate";
     const num = el("input", {type: "number", id: "n-" + L.key, "aria-label": L.label, min: 0, step: isRate ? pct(L.step) : (L.kind === "factor" ? L.step : 1)});
     const rng = el("input", {type: "range", id: "r-" + L.key, "aria-label": L.label + " slider", min: 0, max: L.max, step: L.step});
@@ -661,7 +713,8 @@ function sync() {
 function applyPreset(name) {
   const p = PRESETS[name];
   S = {size: Object.assign(clone(SIZE_DEFAULTS), p.size || {}), lev: Object.assign(clone(DEFAULTS), clone(p.levers))};
-  $("preset-desc").textContent = name + ": " + p.desc;
+  $("preset-desc").textContent = p.desc;
+  document.querySelectorAll("#presets button").forEach(b => b.setAttribute("aria-pressed", String(b.textContent === name)));
   buildCustom(); sync();
 }
 
@@ -701,10 +754,11 @@ function flat(m) {
 
 function traceColor(m, traces) { return "hsl(" + (traces.indexOf((m.de["48"] || {})["63"]) * 70 + 210) % 360 + ",60%,55%)"; }
 
-function table(head, rows, colors, keyCols) {
+function table(head, rows, colors, keyCols, pillCol, mtis) {
   return el("table", {class: "msgs"}, el("thead", {}, el("tr", {}, ...head)),
     el("tbody", {}, ...rows.map((cells, r) => el("tr", {}, ...cells.map((c, i) => {
       const td = el("td", {text: c, ...(keyCols[i] ? {class: "keyf"} : {})});
+      if (i === pillCol) { td.textContent = ""; td.append(el("span", {class: "pill p" + mtis[r], text: c})); }
       if (i === 0) td.style.borderLeft = "4px solid " + colors[r];
       return td;
     })))));
@@ -720,7 +774,7 @@ function rawTable(messages) {
     return el("th", {class: KEY_FIELDS.has(k) ? "keyf" : "", title: KEY_FIELDS.has(k) ? "Key field: commonly used as a fraud-model input" : ""},
       el("span", {class: "fc", text: id}), el("small", {text: FIELDS[k] || ""}));
   });
-  return table(head, rows.map(r => order.map(k => r[k] === undefined ? "" : String(r[k]))), messages.map(m => traceColor(m, traces)), order.map(k => KEY_FIELDS.has(k)));
+  return table(head, rows.map(r => order.map(k => r[k] === undefined ? "" : String(r[k]))), messages.map(m => traceColor(m, traces)), order.map(k => KEY_FIELDS.has(k)), order.indexOf("mti"), messages.map(m => m.mti));
 }
 
 function cleanTable(messages) {
@@ -734,7 +788,7 @@ function cleanTable(messages) {
       (mti === "0100" || mti === "0200") ? MODE_NAMES[(de["22"] || {})["1"]] || "" : "",
       (mti === "0110" || mti === "0210" || mti === "0410") ? de["39"] + " " + (RESPONSES[de["39"]] || "") : "", (de["48"] || {})["63"] || "", other];
   });
-  return table(names.map(n => el("th", {text: n})), rows, messages.map(m => traceColor(m, traces)), names.map(() => false));
+  return table(names.map(n => el("th", {text: n})), rows, messages.map(m => traceColor(m, traces)), names.map(() => false), 1, messages.map(m => m.mti));
 }
 
 function slot(messages) {
