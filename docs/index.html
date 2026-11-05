@@ -170,6 +170,16 @@ pre { border-radius: 10px; }
 .pvcase h3 { font-size: 13px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
 .keybox { border-radius: 10px; border-style: solid; border-left: 4px solid var(--accent2); }
 .chips button[aria-pressed=true] { box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 40%, transparent); }
+#glossary-list { display: table-row-group; }
+.gloss { width: 100%; border-collapse: collapse; font-size: 14px; }
+.gloss th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 8px 10px; border-bottom: 2px solid var(--line); position: sticky; top: 0; background: var(--panel); }
+.gloss td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.gloss tbody tr:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.gloss td:nth-child(1) { width: 170px; } .gloss td:nth-child(2) { width: 220px; font-weight: 600; } .gloss td:nth-child(3) { color: var(--muted); }
+.cat { display: inline-block; font-size: 11.5px; font-weight: 600; padding: 1px 9px; border-radius: 999px; white-space: nowrap; background: color-mix(in srgb, currentColor 13%, transparent); }
+.cat.c0 { color: #2563eb; } .cat.c1 { color: #7c3aed; } .cat.c2 { color: #0d9488; } .cat.c3 { color: #d97706; }
+.cat.c4 { color: #dc2626; } .cat.c5 { color: #db2777; } .cat.c6 { color: #4f46e5; } .cat.c7 { color: #64748b; }
+@media (max-width: 700px) { .gloss td:nth-child(1), .gloss td:nth-child(2) { width: auto; white-space: normal; } }
 </style>
 </head>
 <body>
@@ -187,7 +197,10 @@ pre { border-radius: 10px; }
   </section>
 </div>
 <div class="wrap" id="tab-glossary" hidden>
-  <section class="card"><h2>Glossary</h2><dl id="glossary-list"></dl></section>
+  <section class="card">
+    <div class="bar2"><h2 class="grow" style="margin:0">Glossary</h2><input type="text" id="g-filter" placeholder="Filter terms" aria-label="Filter glossary" style="max-width:240px"></div>
+    <div class="tablewrap"><table class="gloss"><thead><tr><th>Category</th><th>Term</th><th>Meaning</th></tr></thead><tbody id="glossary-list"></tbody></table></div>
+  </section>
   <footer>
   <p><b>How to read the tags.</b> <span class="badge verified">Network rules</span> the number is stated in the card network's published processing rules, which this project cites. <span class="badge secondary">Secondary source</span> the number comes from a vendor, bank or trade source, not from the network's own rules; check the current primary document before quoting it. <span class="badge choice">Our choice</span> no public benchmark was found; the default is a modelling choice, picked so the data looks plausible. Figures change; these were gathered on 2026-11-04.</p>
   <p>Sources:
@@ -334,7 +347,7 @@ const TERMS = [
   ["Gratuity", "gratuit(?:y|ies)", "A tip added after the authorization, so the final amount can legitimately exceed what was authorized."],
   ["Mapping break", "mapping break", "A data-translation bug, often after a software release, that makes a field arrive with the wrong value."],
   ["Card volume", "card volume", "The total dollar value of card spending."],
-  ["Excessive Chargeback program", "Excessive Chargeback program", "A card network's monitoring program for merchants with too many chargebacks. Per a bank guide, one network's program starts at 100 or more chargebacks a month and a ratio of 1.5% or more."]
+  ["Chargeback monitoring program", "chargeback monitoring program|excessive-chargeback program", "A card network's monitoring program for merchants with too many chargebacks. Per a bank guide, one network's program starts at 100 or more chargebacks a month and a ratio of 1.5% or more."]
 ];
 const TERM_RES = TERMS.map(t => new RegExp("^(?:" + t[1] + ")$", "i"));
 const TERM_FIND = new RegExp("(?<![\\w.-])(?:" + TERMS.map(t => "(?:" + t[1] + ")").join("|") + ")(?![\\w-])", "gi");
@@ -393,12 +406,27 @@ function setupTooltip() {
   document.addEventListener("scroll", hide, true);
 }
 
+const CATEGORIES = ["Fields and codes", "Message types", "Parties", "Channels", "Responses and disputes", "Fraud and labels", "Measures", "Generator and rules"];
+const TERM_CATEGORY = {
+  "MCC": 0, "DE (data element)": 0, "STAN": 0, "Trace ID": 0, "Terminal ID": 0, "Entry mode": 0, "Response code": 0,
+  "Message": 1, "Transaction": 1, "Lifecycle": 1, "Authorization": 1, "Preauthorization": 1, "Clearing": 1, "Reversal": 1, "Refund": 1,
+  "Chargeback": 1, "Orphan clearing": 1, "Gratuity": 1,
+  "Issuer": 2, "Acquirer": 2,
+  "Card-present": 3, "Card-not-present": 3, "E-commerce": 3, "ATM": 3, "Pay-at-pump": 3, "Chip fallback": 3, "Offline chip": 3,
+  "Decline": 4, "Response code 91": 4, "Response code 59": 4, "Reason code 4837": 4, "Reason code 4853": 4, "Reason code 4834": 4,
+  "Adjudicated": 5, "Benign look-alike": 5, "Mapping break": 5,
+  "Basis points (bps)": 6, "Card volume": 6, "Latency": 6,
+  "Seed": 7, "Rulebook": 7, "Chargeback monitoring program": 7
+};
+
 function buildGlossary() {
-  const dl = document.getElementById("glossary-list");
-  [...TERMS].sort((a, b) => a[0].localeCompare(b[0])).forEach(t => {
-    const dt = document.createElement("dt"); dt.textContent = t[0];
-    const dd = document.createElement("dd"); dd.textContent = t[2];
-    dl.append(dt, dd);
+  const body = document.getElementById("glossary-list");
+  const rows = TERMS.map(t => ({name: t[0], cat: TERM_CATEGORY[t[0]] ?? 7, def: t[2]}))
+    .sort((x, y) => x.cat - y.cat || x.name.localeCompare(y.name));
+  rows.forEach(r => body.append(el("tr", {}, el("td", {}, el("span", {class: "cat c" + r.cat, text: CATEGORIES[r.cat]})), el("td", {text: r.name}), el("td", {text: r.def}))));
+  document.getElementById("g-filter").addEventListener("input", e => {
+    const q = e.target.value.trim().toLowerCase();
+    [...body.children].forEach(tr => { tr.hidden = q !== "" && !tr.textContent.toLowerCase().includes(q); });
   });
 }
 
