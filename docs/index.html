@@ -99,7 +99,7 @@ input[type=number], input[type=text], input[type=date] {
 .pvcase { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; margin: 10px 0; }
 .pvcase h3 { margin: 0; font-size: 14px; }
 .pvcase .row { margin-top: 6px; }
-.side { position: sticky; top: 12px; }
+.side { position: static; }
 @media (max-width: 900px) { .side { position: static; } }
 .tabs { display: flex; gap: 6px; margin-bottom: 8px; }
 .tabs button[aria-pressed=true] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
@@ -170,6 +170,7 @@ pre { border-radius: 10px; }
 .pvcase h3 { font-size: 13px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
 .keybox { border-radius: 10px; border-style: solid; border-left: 4px solid var(--accent2); }
 .chips button[aria-pressed=true] { box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 40%, transparent); }
+@media (max-width: 700px) { .sizeest .big { font-size: 32px; } .hero h1 { font-size: 26px; } }
 #glossary-list { display: table-row-group; }
 .gloss { width: 100%; border-collapse: collapse; font-size: 14px; }
 .gloss th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 8px 10px; border-bottom: 2px solid var(--line); position: sticky; top: 0; background: var(--panel); }
@@ -186,7 +187,7 @@ pre { border-radius: 10px; }
 <div class="hero">
 <header>
   <h1>Transaction Forge: Event Builder</h1>
-  <p class="lede">Set the size and the oddities, preview the events, copy the command.</p>
+  <p class="lede">Define the dataset and preview the events, or explore premade Examples.</p>
   <div class="seg tabbar" id="pagetabs" role="group" aria-label="Page"><button data-tab="build" aria-pressed="true">Build</button><button data-tab="examples" aria-pressed="false">Examples</button><button data-tab="glossary" aria-pressed="false">Glossary</button></div>
 </header>
 </div>
@@ -248,8 +249,9 @@ pre { border-radius: 10px; }
       <p class="note" id="pv-status" aria-live="polite">Runs the generator here in your browser. Small run, up to 600 cards.</p>
     </section>
     <section class="card">
-      <h2>Output</h2>
+      <h2>Build the full dataset</h2>
       <div class="tabs" id="tabs" role="group" aria-label="Output format"></div>
+      <p class="note" id="out-help" style="margin:0 0 8px"></p>
       <pre id="out" tabindex="0"></pre>
       <div class="row">
         <button class="primary" id="copy">Copy</button>
@@ -434,7 +436,7 @@ function buildGlossary() {
 // kind "rate" is a fraction shown as a percent; "count" is a whole number
 const LEVERS = [
   {group: "Volume", key: "card_activity", label: "Purchases per card (activity)", kind: "factor", max: 5, step: .05, tag: "choice", band: [.14, 1.4],
-   implied: v => "about " + (0.945 * v).toFixed(2) + " purchase attempts per card per day",
+   implied: v => "about " + (Math.round(0.945 * v * 100 + 1e-6) / 100).toFixed(2) + " purchase attempts per card per day",
    help: "How often each card buys, as a multiplier. 1.0 is about 0.95 purchase attempts per card per day.",
    bench: "No single standard exists; it depends on what you count. Reference points (the green band): one global network's 2024 switched transactions (159.4 billion) over its 3.5 billion issued cards is about 0.13 per card per day (many issued cards are inactive and only network-switched transactions count), a multiplier of about 0.14. US card payments per person (Federal Reserve, 2022; my own division, using an assumed population) is about 1.3, a multiplier of about 1.4. The default models an active card.", src: "network annual report; Federal Reserve"},
   {group: "Fraud", key: "fraud_rate", label: "Cards compromised", kind: "rate", max: .05, step: .0001, tag: "choice",
@@ -506,6 +508,9 @@ const PRESETS = {
 const clone = o => JSON.parse(JSON.stringify(o));
 let S = {size: clone(SIZE_DEFAULTS), lev: clone(DEFAULTS)};
 let fmt = "json";
+const OUT_HELP = {json: "Your choices saved as a file, levers.json. The command reads it.",
+  cli: "Paste into a terminal after installing txnforge (see the README). Builds the full dataset from your choices; save levers.json first.",
+  py: "The same build as a Python script, with your choices built in."};
 let stripSim = false;
 const $ = id => document.getElementById(id);
 const pct = v => +(v * 100).toFixed(4);
@@ -722,6 +727,7 @@ function sync() {
   const errs = validate();
   const o = outputs();
   $("out").textContent = o[fmt];
+  $("out-help").textContent = OUT_HELP[fmt];
   $("errs").textContent = errs.join(" · ");
   for (const L of LEVERS) {
     const isRate = L.kind === "rate", val = S.lev[L.key];
@@ -925,7 +931,7 @@ function loadPython(status) {
 
 async function runPreview(reroll) {
   const status = t => { $("pv-status").textContent = t; };
-  if (validate().length) { status("Fix the problem shown under Output first."); return; }
+  if (validate().length) { status("Fix the problem shown in red first."); return; }
   const btn = $("pv-go"); btn.disabled = true;
   try {
     if (reroll) seedBump++;
@@ -975,7 +981,7 @@ function buildChrome() {
   for (const name of Object.keys(PRESETS)) { const b = el("button", {text: name}); b.addEventListener("click", () => applyPreset(name)); host.append(b); }
   host.after(el("p", {class: "note", id: "preset-desc", style: "margin:0 0 6px"}));
   const tabs = $("tabs");
-  for (const [k, lab] of [["json", "levers.json"], ["cli", "Command"], ["py", "Python"]]) {
+  for (const [k, lab] of [["json", "Settings file"], ["cli", "Command"], ["py", "Python"]]) {
     const b = el("button", {text: lab, "aria-pressed": k === fmt}); b.dataset.k = k;
     b.addEventListener("click", () => { fmt = k; tabs.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x.dataset.k === k)); sync(); });
     tabs.append(b);
