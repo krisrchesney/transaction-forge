@@ -3,7 +3,7 @@ import json
 import pytest
 
 from txnforge import generate, validate
-from txnforge.levers import Levers, estimate
+from txnforge.settings import Settings, estimate
 from txnforge.lookup import build, lookup
 
 SMALL = dict(seed=6, cards=500, merchants=120, days=4)
@@ -20,26 +20,26 @@ def requests(r):
 
 
 def test_card_activity_scales_purchases():
-    one = generate(levers=dict(fraud_rate=0), **SMALL)
-    two = generate(levers=dict(fraud_rate=0, card_activity=2), **SMALL)
+    one = generate(settings=dict(fraud_rate=0), **SMALL)
+    two = generate(settings=dict(fraud_rate=0, card_activity=2), **SMALL)
     assert 1.8 < requests(two) / requests(one) < 2.2
 
 
 def test_estimate_follows_card_activity():
     for activity in (.4, 2.5):
         lv = dict(card_activity=activity)
-        actual = len(generate(seed=21, cards=800, merchants=100, days=7, levers=lv)["messages"])
+        actual = len(generate(seed=21, cards=800, merchants=100, days=7, settings=lv)["messages"])
         assert abs(estimate(800, 7, lv)["messages"] - actual) / actual < .06, activity
 
 
 @pytest.mark.parametrize("bad", [0, -1, 11])
 def test_card_activity_must_be_in_range(bad):
     with pytest.raises(ValueError):
-        Levers(card_activity=bad)
+        Settings(card_activity=bad)
 
 
 def test_stripped_feed_has_no_simulator_fields_but_labels_still_map_by_trace():
-    r = generate(strip_sim=True, levers=NOISY, **SMALL)
+    r = generate(strip_sim=True, settings=NOISY, **SMALL)
     assert all("sim" not in m and "sim_issuer" not in m["de"] for m in r["messages"])
     seen = traces(r["messages"])
     labeled = [t for lab in r["labels"] for t in (lab.get("traces") or [lab.get("trace")]) if lab["kind"] != "benign_lookalike"]
@@ -50,7 +50,7 @@ def test_stripped_feed_has_no_simulator_fields_but_labels_still_map_by_trace():
 
 
 def test_stripped_feed_still_validates_and_loads_into_lookup():
-    r = generate(strip_sim=True, levers=NOISY, **SMALL)
+    r = generate(strip_sim=True, settings=NOISY, **SMALL)
     report = validate(r["messages"])
     assert report["findings"] and all(f["trace"] for f in report["findings"] if f["rule"] != "R11")
     conn = build(r["messages"])
@@ -59,12 +59,12 @@ def test_stripped_feed_still_validates_and_loads_into_lookup():
 
 
 def test_unstripped_feed_keeps_them_by_default():
-    r = generate(levers=dict(fraud_rate=0), **SMALL)
+    r = generate(settings=dict(fraud_rate=0), **SMALL)
     assert all("sim" in m for m in r["messages"]) and any("sim_issuer" in m["de"] for m in r["messages"])
 
 
 def test_streamed_run_writes_the_per_trace_label_table(tmp_path):
-    r = generate(out_dir=tmp_path, strip_sim=True, levers=NOISY, shard_cards=200, **SMALL)
+    r = generate(out_dir=tmp_path, strip_sim=True, settings=NOISY, shard_cards=200, **SMALL)
     assert not list(tmp_path.glob("*.part*"))
     rows = [json.loads(line) for line in open(tmp_path / "labels_by_trace.jsonl", encoding="utf-8")]
     msgs = [json.loads(line) for line in open(tmp_path / "messages.jsonl", encoding="utf-8")]

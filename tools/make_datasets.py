@@ -31,21 +31,21 @@ HOLDOUT_INCIDENTS = [
 
 DATASETS = {
     "clean": dict(why="Proves a detector raises no alarms on valid data.", seed=101, cards=3000, merchants=400, days=14,
-                  incidents=False, levers=dict(fraud_rate=0, broken_chip_merchants=0)),
+                  incidents=False, settings=dict(fraud_rate=0, broken_chip_merchants=0)),
     "default": dict(why="Development set: default fraud, the five prepared incidents, no defects.", seed=102,
-                    cards=3000, merchants=400, days=14, incidents=True, levers={}),
+                    cards=3000, merchants=400, days=14, incidents=True, settings={}),
     "long": dict(why="90 days, for per-card profiles and weekly patterns.", seed=103, cards=1500, merchants=300,
-                 days=90, incidents=True, levers={}),
+                 days=90, incidents=True, settings={}),
     "noisy": dict(why="Training and scoring: 2% fraud and every data defect at 1%.", seed=104, cards=5000,
-                  merchants=600, days=30, incidents=True, levers=TRAINING),
+                  merchants=600, days=30, incidents=True, settings=TRAINING),
     "industry": dict(why="Realism check: fraud near the industry share of volume (very few cases).", seed=105,
                      cards=10000, merchants=800, days=14, incidents=True,
-                     levers=dict(fraud_rate=.00035, base_decline_rate=.08)),
+                     settings=dict(fraud_rate=.00035, base_decline_rate=.08)),
     "drill": dict(why="Incident practice: the prepared five plus a network outage, an acquirer outage and a surge.",
-                  seed=106, cards=3000, merchants=400, days=14, incidents=True, levers=dict(custom_incidents=DRILL)),
+                  seed=106, cards=3000, merchants=400, days=14, incidents=True, settings=dict(custom_incidents=DRILL)),
     "holdout": dict(why="Final test, run once: noisy settings plus four incidents of other types, new seed.", seed=999,
                     cards=5000, merchants=600, days=30, incidents=True,
-                    levers=dict(TRAINING, custom_incidents=HOLDOUT_INCIDENTS)),
+                    settings=dict(TRAINING, custom_incidents=HOLDOUT_INCIDENTS)),
 }
 
 

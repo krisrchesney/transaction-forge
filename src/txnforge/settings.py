@@ -1,4 +1,4 @@
-"""Levers: every knob that decides how many oddities the generated feed contains.
+"""Settings: every knob that decides how many oddities the generated feed contains.
 
 The defaults reproduce the original feed (clean except for a little fraud, the five operational incidents
 and the ordinary noise of real traffic). Defect rates default to zero, so a feed has no data-quality
@@ -81,7 +81,7 @@ def check_custom_incident(spec, where="custom_incidents"):
 
 
 @dataclass
-class Levers:
+class Settings:
     # volume
     card_activity: float = 1.0             # multiplier on how often each card buys; 1.0 is about 0.95 purchase attempts per card per day
     # fraud
@@ -138,7 +138,7 @@ class Levers:
         names = {f.name for f in fields(cls)}
         unknown = set(value) - names
         if unknown:
-            raise ValueError(f"unknown lever(s): {sorted(unknown)}; run 'txnforge levers' for the list")
+            raise ValueError(f"unknown setting(s): {sorted(unknown)}; run 'txnforge settings' for the list")
         return cls(**value)
 
     def with_overrides(self, **kw):
@@ -182,9 +182,9 @@ def run_cost(messages, workers=None):
 
 
 
-def estimate(cards, days, levers=None):
+def estimate(cards, days, settings=None):
     """Rough message counts for a run: good to within a few percent on feeds of a few thousand cards or more."""
-    lv = Levers.coerce(levers)
+    lv = Settings.coerce(settings)
     e = ESTIMATE
     requests = cards * days * e["requests_per_card_day"] * lv.card_activity
     approved = requests * (1 - lv.base_decline_rate)
@@ -205,9 +205,9 @@ def estimate(cards, days, levers=None):
             "compromised_cards": compromised, "parts": parts}
 
 
-def cards_for_target(target_messages, days, levers=None):
+def cards_for_target(target_messages, days, settings=None):
     """How many cards give roughly this many messages (uses estimate(); a few percent off)."""
-    per_card = estimate(100000, days, levers)["messages"] / 100000
+    per_card = estimate(100000, days, settings)["messages"] / 100000
     return max(2, round(target_messages / per_card))
 
 

@@ -7,7 +7,7 @@ import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-MODULES = ["__init__.py", "generator.py", "levers.py", "rules.py", "validator.py"]
+MODULES = ["__init__.py", "generator.py", "settings.py", "rules.py", "validator.py"]
 
 
 def sync():

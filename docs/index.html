@@ -564,7 +564,7 @@ function buildSize() {
   }
 }
 
-// mirrors cards_for_target() in src/txnforge/levers.py
+// mirrors cards_for_target() in src/txnforge/settings.py
 function cardsForTarget(target) {
   const perCard = estimate(100000, S.size.days, S.lev).messages / 100000;
   return Math.max(2, Math.round(target / perCard));
@@ -656,12 +656,12 @@ function validate() {
 function outputs() {
   const lv = clone(S.lev), s = S.size;
   const json = JSON.stringify(lv, null, 2);
-  const cli = `txnforge generate --out out/run1 --seed ${s.seed} ${s.target ? "--target-messages " + s.target : "--cards " + s.cards} --merchants ${s.merchants} --days ${s.days} --start ${s.start} --workers 4${stripSim ? " --strip-sim" : ""} --levers settings.json`;
-  const py = `from txnforge import generate\n\nresult = generate(\n    seed=${s.seed}, cards=${s.cards}, merchants=${s.merchants}, days=${s.days}, start="${s.start}",\n    levers=${JSON.stringify(lv, null, 4).replace(/\n/g, "\n    ")},\n    out_dir="out/run1", workers=4,${stripSim ? " strip_sim=True," : ""}\n)\nprint(result["manifest"]["label_counts"])`;
+  const cli = `txnforge generate --out out/run1 --seed ${s.seed} ${s.target ? "--target-messages " + s.target : "--cards " + s.cards} --merchants ${s.merchants} --days ${s.days} --start ${s.start} --workers 4${stripSim ? " --strip-sim" : ""} --settings settings.json`;
+  const py = `from txnforge import generate\n\nresult = generate(\n    seed=${s.seed}, cards=${s.cards}, merchants=${s.merchants}, days=${s.days}, start="${s.start}",\n    settings=${JSON.stringify(lv, null, 4).replace(/\n/g, "\n    ")},\n    out_dir="out/run1", workers=4,${stripSim ? " strip_sim=True," : ""}\n)\nprint(result["manifest"]["label_counts"])`;
   return {json, cli, py};
 }
 
-// mirrors estimate() in src/txnforge/levers.py; a test keeps the coefficients identical
+// mirrors estimate() in src/txnforge/settings.py; a test keeps the coefficients identical
 function estimate(cards, days, v) {
   const e = ESTIMATE;
   const requests = cards * days * e.requests_per_card_day * v.card_activity;
@@ -683,7 +683,7 @@ function estimate(cards, days, v) {
   return {messages, transactions: requests + refunds + fraud / 2.6, compromised, parts};
 }
 
-// mirrors run_cost() in src/txnforge/levers.py
+// mirrors run_cost() in src/txnforge/settings.py
 function runCost(messages) {
   const e = ESTIMATE, groups = Math.max(1, Math.ceil(messages / e.group_messages)), workers = Math.min(e.max_workers, groups);
   const rate = e.messages_per_second * (workers === 1 ? 1 : workers * e.parallel_efficiency);
@@ -900,7 +900,7 @@ function buildTabs() {
 
 // ---- live preview: the real generator, run in the browser with Pyodide ----------------------------------
 const PYODIDE_URL = "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/";
-const PY_FILES = ["__init__.py", "generator.py", "levers.py", "rules.py", "validator.py"];
+const PY_FILES = ["__init__.py", "generator.py", "settings.py", "rules.py", "validator.py"];
 let pyReady = null, preview = null, seedBump = 0;
 
 function loadPython(status) {

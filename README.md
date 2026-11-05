@@ -16,7 +16,7 @@ txnforge generate --out out/demo            # ~120,000 messages, 14 days, 3,000 
 txnforge validate out/demo/messages.jsonl   # findings, each with its rule and citation
 pytest                                      # 88 tests
 uvicorn txnforge.api:app                    # sandbox API on http://127.0.0.1:8000/docs
-txnforge levers                             # every dial and its default
+txnforge settings                             # every dial and its default
 ```
 
 Output of one run (seed 7):
@@ -31,16 +31,16 @@ Output of one run (seed 7):
 
 That last line is the point: one acquirer started sending pay-at-pump transactions with an e-commerce entry mode after a "release" on day 9. Nothing else in the feed is wrong, and the validator isolates it to one acquirer from the data alone.
 
-## Levers: choose how many oddities
+## Settings: choose how many oddities
 
-Every dial is a share or a count, set with `--set name=value` (repeatable), a JSON file (`--levers file.json`) or `levers={...}` in Python. Out-of-range values are rejected. The manifest records the levers used and `label_counts` shows what was actually injected.
+Every dial is a share or a count, set with `--set name=value` (repeatable), a JSON file (`--settings file.json`) or `settings={...}` in Python. Out-of-range values are rejected. The manifest records the settings used and `label_counts` shows what was actually injected.
 
 ```bash
 txnforge generate --out out/noisy --set fraud_rate=0.02 --set fraud_mix=card_testing:3,geo_velocity:1 \
     --set duplicate_rate=0.01 --set missing_terminal_rate=0.02 --set late_clearing_rate=0.005
 ```
 
-| Group | Lever (default) | Effect |
+| Group | Setting (default) | Effect |
 |---|---|---|
 | Fraud | `fraud_rate` (.004) | Share of cards compromised |
 | | `fraud_mix` (equal) | Relative weight of card_testing, skimmed_fallback, geo_velocity, electronics_ring |
@@ -72,7 +72,7 @@ Measured on a 4-core PC with 48 GB of RAM:
 
 The 10-million feed was checked afterwards: line count equals the manifest, timestamps are in order, and every message type is present. Real networks are far larger (one global network reported 159.4 billion switched transactions for 2024, about 437 million a day), so this is sized to exercise detection and analysis methods, not to match production volume. The same output for a seed is identical across worker counts. Without `--out`, `generate()` returns the feed in memory, which suits runs up to a few hundred thousand messages.
 
-**Event builder.** Open `docs/index.html` in a browser, or use the hosted page linked above (no install; the preview needs internet on first use) to set every lever with sliders. Each lever shows its default, a green band for a typical range where one exists, and a tag saying where the number comes from: the card network's published rules, a secondary source, or a modelling choice. It writes the `levers.json`, the command, or the Python call. Presets: default, clean baseline, industry-like, detector training, stress test. A test keeps the page's defaults in step with `levers.py`, and another keeps the copies of the generator in `docs/py/` (used by the preview) identical to `src/`; run `python tools/sync_pages_py.py` after changing the generator. Industry-reference figures are directional and dated 2026-11-04; check primary sources before quoting them.
+**Event builder.** Open `docs/index.html` in a browser, or use the hosted page linked above (no install; the preview needs internet on first use) to set every setting with sliders. Each setting shows its default, a green band for a typical range where one exists, and a tag saying where the number comes from: the card network's published rules, a secondary source, or a modelling choice. It writes the `settings.json`, the command, or the Python call. Presets: default, clean baseline, industry-like, detector training, stress test. A test keeps the page's defaults in step with `settings.py`, and another keeps the copies of the generator in `docs/py/` (used by the preview) identical to `src/`; run `python tools/sync_pages_py.py` after changing the generator. Industry-reference figures are directional and dated 2026-11-04; check primary sources before quoting them.
 
 **For a detector.** `docs/DATA-CONTRACT.md` describes the files, the answer-key labels and how to score a detector against them. `python tools/make_datasets.py` builds seven ready-made datasets (clean, default, long, noisy, industry, drill, holdout) in `out/datasets/`, with `--strip-sim` applied so the simulator-only fields are gone and labels map to messages by trace ID. The Event Builder also sets purchases per card (the `card_activity` multiplier, with reference points) and has a checkbox for stripping.
 
@@ -106,7 +106,7 @@ Data elements used: 2 PAN, 3 processing code, 4 amount, 18 MCC, 22 POS entry mod
 
 Lifecycles it knows: plain purchase, decline, refund, acquirer timeout then full reversal, hotel preauthorization with partial reversal and later clearing, pay-at-pump two-step authorization, ATM single message, chip fallback.
 
-Realism levers: 21 merchant categories each with its own ticket-size distribution and entry-mode mix; fuel and ATM can never be e-commerce; ATM amounts are whole dollars; per-card spending level and activity rate; local-time peaks that differ by country (US evening, Spain late with a midday lull, UK evening); three currencies; a few merchants with genuinely broken chip readers (high fallback that is valid, labeled as a look-alike, not fraud).
+Realism settings: 21 merchant categories each with its own ticket-size distribution and entry-mode mix; fuel and ATM can never be e-commerce; ATM amounts are whole dollars; per-card spending level and activity rate; local-time peaks that differ by country (US evening, Spain late with a midday lull, UK evening); three currencies; a few merchants with genuinely broken chip readers (high fallback that is valid, labeled as a look-alike, not fraud).
 
 ## What gets injected (all in `answer_key.jsonl` and `incidents.json`)
 

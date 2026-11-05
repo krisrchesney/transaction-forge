@@ -1,13 +1,13 @@
 import pytest
 
 from txnforge import generate, validate
-from txnforge.levers import ALL_INCIDENT_TYPES, INCIDENT_INFO, Levers
+from txnforge.settings import ALL_INCIDENT_TYPES, INCIDENT_INFO, Settings
 
 BASE = dict(seed=8, cards=1200, merchants=200, days=6, incidents=False, fraud_rate=0)
 
 
 def run(*specs, **kw):
-    return generate(levers=dict(custom_incidents=list(specs), **kw), **BASE)
+    return generate(settings=dict(custom_incidents=list(specs), **kw), **BASE)
 
 
 def window(result):
@@ -38,7 +38,7 @@ def test_every_incident_type_has_a_description_and_a_valid_default():
         sev = info["severity"]
         assert sev["min"] <= sev["default"] <= sev["max"], kind
         assert info["label"] and info["help"] and info["target"] in ("issuer", "acquirer", "country", "state", "mcc", "none")
-        Levers(custom_incidents=[dict(type=kind)])             # defaults alone are a valid incident
+        Settings(custom_incidents=[dict(type=kind)])             # defaults alone are a valid incident
 
 
 def test_custom_incident_is_recorded_in_the_answer_key():
@@ -50,7 +50,7 @@ def test_custom_incident_is_recorded_in_the_answer_key():
 
 def test_custom_incidents_apply_even_when_prepared_ones_are_off_and_add_to_them_when_on():
     assert len(run(spec("network_outage"))["incidents"]) == 1
-    both = generate(seed=8, cards=300, merchants=100, days=6, levers=dict(custom_incidents=[spec("network_outage")]))
+    both = generate(seed=8, cards=300, merchants=100, days=6, settings=dict(custom_incidents=[spec("network_outage")]))
     assert len(both["incidents"]) == 6
 
 
@@ -133,4 +133,4 @@ def test_latency_spike_multiplies_response_time():
 ])
 def test_bad_custom_incidents_are_rejected(bad):
     with pytest.raises(ValueError):
-        Levers(custom_incidents=[bad])
+        Settings(custom_incidents=[bad])
