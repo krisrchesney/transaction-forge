@@ -71,9 +71,21 @@ input[type=number], input[type=text], input[type=date] {
 .inc select { width: 100%; font: inherit; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); }
 .inc .when { font-size: 13px; color: var(--muted); margin-top: 4px; }
 .inc .help { font-size: 13px; color: var(--muted); margin: 4px 0 0; }
-.jump { display: flex; gap: 16px; margin: 0 0 12px; font-size: 14px; }
-.howto { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; margin: 0 0 14px; font-size: 14px; max-width: 80ch; }
-.howto code { font-size: 12.5px; word-break: break-all; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px 28px; }
+.seg { display: inline-flex; gap: 0; }
+.seg button { border-radius: 0; margin-left: -1px; }
+.seg button:first-child { border-radius: 8px 0 0 8px; margin-left: 0; }
+.seg button:last-child { border-radius: 0 8px 8px 0; }
+.seg button[aria-pressed=true] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.tabbar { margin: 10px 0 14px; }
+.bench summary { cursor: pointer; font-size: 12.5px; color: var(--muted); }
+.bench p { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+.msgs th small { display: block; font-weight: 400; font-size: 11px; max-width: 170px; white-space: normal; }
+.msgs th .fc { font-family: ui-monospace, Consolas, monospace; }
+.msgs .keyf { background: rgba(31, 95, 191, .08); }
+.msgs th.keyf::after { content: " ★"; color: var(--accent); }
+.bar2 { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
+.bar2 .grow { flex: 1; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; }
 .chips button[aria-pressed=true] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .tablewrap { overflow-x: auto; margin: 8px 0; }
@@ -113,63 +125,62 @@ a { color: var(--accent); }
 <body>
 <header>
   <h1>Transaction Forge: Event Builder</h1>
-  <p class="lede">Choose how big the dataset is and how many oddities it contains. The page writes the exact settings file (levers.json), command or Python call for <code>txnforge</code>. Green bands show a typical or expected range where one exists; every note says where the number comes from and how far to trust it. Dotted-underlined words are industry terms: hover, tap or tab to them for a definition, or see the glossary at the bottom.</p>
-  <nav class="jump" aria-label="Sections"><a href="#sample-data">Sample data</a><a href="#build">Build your own</a><a href="#preview-launch">Preview</a><a href="#glossary-card">Glossary</a></nav>
-  <p class="howto"><b>How this works.</b> Choose settings below and press <b>Generate a preview</b> to see a small sample made by the real generator, right in your browser, with each case's answer hidden until you reveal it. Full-size runs (up to millions of messages) happen on your own computer: the page writes the settings and the command. To run it you need Python 3.10 or newer: <code>pip install git+https://github.com/krisrchesney/transaction-forge.git</code>, save the settings as <code>levers.json</code>, then paste the command. A hand-picked sample of what comes out is just below.</p>
+  <p class="lede">Set the size and the oddities, preview the events, copy the command.</p>
+  <div class="seg tabbar" id="pagetabs" role="group" aria-label="Page"><button data-tab="build" aria-pressed="true">Build</button><button data-tab="examples" aria-pressed="false">Examples</button><button data-tab="glossary" aria-pressed="false">Glossary</button></div>
 </header>
-<div style="max-width:1180px;margin:0 auto;padding:0 16px">
-  <section class="card" id="sample-data">
-    <h2>Sample data</h2>
-    <p class="note" style="margin:0">Ten hand-picked purchases (54 messages) from one small generated run, shown the way a detector would see them: card numbers are masked here and the simulator-only fields are removed. A real run holds 100,000 to 10 million messages; this is not the full file. Pick a case to see its messages, what to look for, and what the answer key says about it.</p>
-    <div class="chips" id="sample-chips" role="group" aria-label="Sample cases"></div>
+<div class="wrap" id="tab-examples" hidden>
+  <section class="card">
+    <div class="bar2"><div class="chips grow" id="sample-chips" role="group" aria-label="Examples" style="margin:0"></div><div id="sample-view"></div></div>
     <div id="sample-body"></div>
   </section>
 </div>
-<div id="build"></div>
+<div class="wrap" id="tab-glossary" hidden>
+  <section class="card"><h2>Glossary</h2><dl id="glossary-list"></dl></section>
+  <footer>
+  <p><b>How to read the tags.</b> <span class="badge verified">Network rules</span> the number is stated in the card network's published processing rules, which this project cites. <span class="badge secondary">Secondary source</span> the number comes from a vendor, bank or trade source, not from the network's own rules; check the current primary document before quoting it. <span class="badge choice">Our choice</span> no public benchmark was found; the default is a modelling choice, picked so the data looks plausible. Figures change; these were gathered on 2026-11-04.</p>
+  <p>Sources:
+    <a href="https://www.federalreserve.gov/paymentsystems/2024-November-The-Federal-Reserve-Payments-Study.htm">Federal Reserve Payments Study (2022 data)</a> ·
+    <a href="https://nilsonreport.com/articles/card-fraud-losses-worldwide-in-2023/">Nilson Report, card fraud losses worldwide in 2023</a> ·
+    <a href="https://www.signifyd.com/blog/increase-authorization-rates/">Signifyd, authorization rates</a> ·
+    <a href="https://www.rapyd.net/blog/card-present-vs-card-not-present-transactions/">Rapyd, card-present vs card-not-present</a>.
+  </p>
+</footer>
+</div>
+<div id="tab-build">
 <div class="presets" id="presets" role="group" aria-label="Presets" style="max-width:1180px;margin:0 auto;padding:0 16px"></div>
 <main class="layout">
   <div>
     <section class="card">
       <h2>Dataset size</h2>
       <div class="size" id="size"></div>
-      <label class="f" style="margin-top:10px"><input type="checkbox" id="s-strip"> Remove simulator-only fields (recommended for datasets a detector will read)</label>
+      <label class="f" style="margin-top:10px"><input type="checkbox" id="s-strip"> Strip simulator fields (for detector datasets)</label>
       <div class="sizeest" aria-live="polite">
         <div class="big"><span id="se-msgs"></span> <small>messages (the events in the feed)</small></div>
         <div class="sub">from about <b id="se-txns"></b> transactions · <span id="se-time"></span></div>
         <div class="parts" id="se-parts"></div>
-        <p class="note">Messages grow in proportion to cards × days (about 2.9 per card per day by default). Merchants do not change the count; they only spread the same purchases over more shops (below about 100 merchants some purchases are skipped). The levers below move it a little: refunds, reversals, chargebacks, duplicates and fraud add messages, and declines remove clearings. Estimates of message counts were checked against real runs and land within about 3%. Big runs are cut into groups of cards (about 250,000 messages each) that generate in parallel and stream to disk, so memory stays small and size is limited by disk. The 10-million preset was run for real: 5.5 minutes, 3.7 GB.</p>
         <p class="note" id="se-note"></p>
       </div>
     </section>
     <div id="levers"></div>
     <section class="card">
       <h2>Fraud patterns (relative weights)</h2>
-      <p class="note" style="margin:0 0 8px">Which kinds of fraud the compromised cards produce. Only the ratios matter; a weight of 0 turns a pattern off.</p>
       <div class="mix" id="mix"></div>
     </section>
     <section class="card">
       <h2>Operational incidents</h2>
       <div class="checks" id="incidents"></div>
-      <p class="note">Incidents are time-boxed events with known causes (issuer outage, latency spike, storm, rule change, release bug). They are written to <code>incidents.json</code>. There is no industry percentage for them; they exist so a monitor has something to find.</p>
     </section>
     <section class="card" id="custom-card">
       <h2>Your own incidents</h2>
-      <p class="note" style="margin:0 0 8px">Place any of 12 incident types anywhere in the run: pick a type, a target, when it starts and how long it lasts. The prepared five above have fixed times; these do not. Each one is written to <code>incidents.json</code> with the ID INC-C1, INC-C2 and so on, and applies even if the prepared ones are switched off.</p>
       <div id="custom-rows"></div>
       <div class="row"><button id="add-incident">Add an incident</button></div>
-    </section>
-    <section class="card" id="glossary-card">
-      <h2>Glossary</h2>
-      <dl id="glossary-list"></dl>
     </section>
   </div>
   <aside class="side">
     <section class="card" id="preview-launch">
-      <h2>Preview your settings</h2>
-      <p class="note" style="margin:0 0 8px">Generates a small sample right here in the page, with the real generator and the settings you chose, and shows it the way a detector would see it. What each case is stays hidden until you reveal it.</p>
-      <div class="row"><button class="primary" id="pv-go">Generate a preview</button></div>
-      <p class="note" id="pv-status" aria-live="polite"></p>
-      <p class="note">The first use downloads a Python interpreter (about 10 MB, from a public CDN, then cached). Your settings never leave the page. The preview keeps your rates but caps the run at 600 cards and 3 to 7 days, so rare events are fewer than in a full run.</p>
+      <h2>Preview</h2>
+      <div class="row" style="margin-top:0"><button class="primary" id="pv-go">Generate a preview</button></div>
+      <p class="note" id="pv-status" aria-live="polite">Runs the generator here in your browser. Small run, up to 600 cards.</p>
     </section>
     <section class="card">
       <h2>Output</h2>
@@ -193,21 +204,13 @@ a { color: var(--accent); }
     </section>
   </aside>
 </main>
-<div style="max-width:1180px;margin:0 auto;padding:0 16px">
+<div class="wrap" style="padding-bottom:0">
   <section class="card" id="preview-card" hidden>
-    <h2>Your preview</h2>
+    <h2>Preview</h2>
     <div id="preview-body"></div>
   </section>
 </div>
-<footer style="max-width:1180px;margin:0 auto;padding:0 16px 28px">
-  <p><b>How to read the tags.</b> <span class="badge verified">Network rules</span> the number is stated in the card network's published processing rules, which this project cites. <span class="badge secondary">Secondary source</span> the number comes from a vendor, bank or trade source, not from the network's own rules; check the current primary document before quoting it. <span class="badge choice">Our choice</span> no public benchmark was found; the default is a modelling choice, picked so the data looks plausible. Figures change; these were gathered on 2026-11-04.</p>
-  <p>Sources:
-    <a href="https://www.federalreserve.gov/paymentsystems/2024-November-The-Federal-Reserve-Payments-Study.htm">Federal Reserve Payments Study (2022 data)</a> ·
-    <a href="https://nilsonreport.com/articles/card-fraud-losses-worldwide-in-2023/">Nilson Report, card fraud losses worldwide in 2023</a> ·
-    <a href="https://www.signifyd.com/blog/increase-authorization-rates/">Signifyd, authorization rates</a> ·
-    <a href="https://www.rapyd.net/blog/card-present-vs-card-not-present-transactions/">Rapyd, card-present vs card-not-present</a>.
-  </p>
-</footer>
+</div>
 <div id="tip" role="tooltip" hidden></div>
 
 <script>
@@ -291,7 +294,7 @@ function termDef(i, text) {
 
 // wrap glossary terms found in text nodes under root; each term is marked once per card
 function enrich(root) {
-  const skip = "pre, code, input, textarea, button, a, .g, .badge, h1, script, style, select, #glossary-list, #tip";
+  const skip = "pre, code, input, textarea, button, a, .g, .badge, h1, script, style, select, td, th, summary, #glossary-list, #tip";
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   const nodes = [];
   for (let n = walker.nextNode(); n; n = walker.nextNode()) if (n.nodeValue.trim() && !n.parentElement.closest(skip)) nodes.push(n);
@@ -446,8 +449,8 @@ function buildLevers() {
     const track = el("div", {class: "track"});
     if (L.band) track.append(el("div", {class: "band", style: `left:${L.band[0] / L.max * 100}%;width:${(L.band[1] - L.band[0]) / L.max * 100}%`}));
     track.append(el("div", {class: "tick", title: "default", style: `left:calc(${DEFAULTS[L.key] / L.max * 100}% - 1px)`}), rng);
-    const bench = el("div", {class: "bench"}, el("span", {class: "badge " + L.tag, text: TAG[L.tag]}), " ", L.bench);
-    if (L.src) bench.append(" ", el("span", {class: "src", text: "(" + L.src + ")"}));
+    const bench = el("details", {class: "bench"}, el("summary", {}, el("span", {class: "badge " + L.tag, text: TAG[L.tag]}), " industry reference"),
+      el("p", {text: L.bench + (L.src ? " (" + L.src + ")" : "")}));
     card.append(el("div", {class: "lever"},
       el("div", {class: "top"}, el("span", {class: "name", text: L.label}), el("span", {class: "key", text: L.key + " · default " + (isRate ? pct(DEFAULTS[L.key]) + "%" : DEFAULTS[L.key])})),
       el("div", {class: "help", text: L.help}),
@@ -464,7 +467,7 @@ function buildSize() {
   const host = $("size"); host.textContent = "";
   // typing a number of events pins it: cards are recomputed whenever days or settings change, until Cards is edited by hand
   const target = el("input", {type: "number", id: "s-target", min: 1000, step: 1000, "aria-label": "Events to build"});
-  host.append(el("label", {class: "f", style: "grid-column: 1 / -1"}, "Events (messages) to build: type a number and Cards adjusts to match", target));
+  host.append(el("label", {class: "f", style: "grid-column: 1 / -1"}, "Events to build (cards adjust to match)", target));
   target.addEventListener("input", () => { if (+target.value >= 1) { S.size.target = Math.max(1000, Math.round(+target.value)); sync(); } });
   for (const [k, lab, type] of [["seed", "Seed", "number"], ["cards", "Cards", "number"], ["merchants", "Merchants", "number"], ["days", "Days", "number"], ["start", "Start date", "date"]]) {
     const i = el("input", {type, id: "s-" + k, min: 1}); host.append(el("label", {class: "f"}, lab, i));
@@ -631,7 +634,7 @@ function estimates() {
   if (s.merchants < 100) note += "With fewer than about 100 merchants some purchases find no shop and are skipped, so the count runs low. ";
   if (est.compromised && est.compromised <= 5) note += "Only " + est.compromised + " compromised card(s): too few fraud cases to measure a detector with.";
   $("se-note").textContent = note;
-  $("est-note").textContent = "Fraud share comes from the default feed and moves with the fraud mix and population.";
+  $("est-note").textContent = "";
 }
 
 function sync() {
@@ -662,69 +665,128 @@ function applyPreset(name) {
   buildCustom(); sync();
 }
 
-// ---- sample data -----------------------------------------------------------------------------------
+// ---- messages: raw fields first (real field names), then cleaned -------------------------------------
 const MTI_NAMES = {"0100": "Authorization request", "0110": "Authorization response", "0200": "ATM request", "0210": "ATM response",
   "0400": "Reversal request", "0410": "Reversal response", "1240": "Clearing", "1442": "Chargeback"};
 const MODE_NAMES = {"01": "keyed", "05": "chip", "07": "tap", "10": "stored card", "80": "chip fallback", "81": "online", "90": "magnetic stripe"};
 const CURRENCY = {"840": "USD", "826": "GBP", "978": "EUR"};
-const RESPONSES = {"00": "approved", "05": "declined: do not honor", "10": "partial approval", "14": "declined: invalid card number",
-  "51": "declined: insufficient funds", "54": "declined: expired card", "59": "declined: suspected fraud",
-  "91": "declined: issuer unavailable", "96": "declined: system malfunction"};
+const RESPONSES = {"00": "approved", "05": "do not honor", "10": "partial approval", "14": "invalid card number",
+  "51": "insufficient funds", "54": "expired card", "59": "suspected fraud", "91": "issuer unavailable", "96": "system malfunction"};
 const REASONS = {"4837": "no cardholder authorization", "4853": "cardholder dispute", "4834": "point-of-interaction error"};
+// field id -> name, in message order. "22.1" is data element 22, subfield 1; "meta" is not a card field (the simulator's latency)
+const FIELDS = {"ts": "Timestamp (envelope)", "mti": "Message Type Identifier", "2": "Primary Account Number (PAN)", "3": "Processing Code",
+  "4": "Amount, Transaction", "7": "Transmission Date and Time", "11": "System Trace Audit Number (STAN)", "14": "Expiration Date",
+  "18": "Merchant Category Code (MCC)", "22.1": "POS Terminal PAN Entry Mode", "22.2": "POS Terminal PIN Entry Mode", "25": "Message Reason Code",
+  "32": "Acquiring Institution ID", "37": "Retrieval Reference Number", "38": "Authorization ID Response", "39": "Response Code",
+  "41": "Card Acceptor Terminal ID", "42": "Card Acceptor ID Code", "43.name": "Card Acceptor Name", "43.city": "Card Acceptor City",
+  "43.state": "Card Acceptor State", "43.country": "Card Acceptor Country", "43.zip": "Card Acceptor Postal Code", "48.63": "Additional Data: Trace ID",
+  "49": "Currency Code, Transaction", "61.7": "POS Data: Transaction Status", "90.mti": "Original Data: Message Type", "90.stan": "Original Data: STAN",
+  "90.ts": "Original Data: Date and Time", "95": "Replacement Amount", "meta.latency_ms": "Response latency, ms (simulator)"};
+// the fields fraud models lean on most: date and time, amount, entry mode, merchant, MCC, card number (BIN), ZIP, currency
+const KEY_FIELDS = new Set(["ts", "7", "4", "22.1", "43.name", "18", "2", "43.zip", "49"]);
+const FIELD_ORDER = Object.keys(FIELDS);
+let VIEW = "raw";
+const slots = [];
 
 function money(de, field) { return (parseInt(de[field], 10) / 100).toFixed(2) + " " + (CURRENCY[de["49"]] || ""); }
 
-function messageRow(m, color) {
-  const de = m.de, mti = m.mti, loc = de["43"] || {};
-  let amount = de["4"] ? money(de, "4") : "", note = "", how = "";
-  if (mti === "0100" || mti === "0200") how = MODE_NAMES[(de["22"] || {})["1"]] || "";
-  if (mti === "0110" || mti === "0210") note = RESPONSES[de["39"]] || "code " + de["39"];
-  if (mti === "0400") { amount = money(de, "95"); note = "cancels the hold; new hold amount"; }
-  if (mti === "0410") { amount = ""; note = "reversal confirmed"; }
-  if (mti === "1240") note = "final amount for settlement";
-  if (mti === "1442") note = "reason " + de["25"] + ": " + (REASONS[de["25"]] || "");
-  const trace = ((de["48"] || {})["63"] || "").slice(0, 6);
-  const cells = [m.ts.slice(5, 10) + " " + m.ts.slice(11, 19), mti + " " + (MTI_NAMES[mti] || ""), amount,
-    (loc.name ? loc.name + " · " : "") + (de["18"] || ""), how, note, trace];
-  const tr = el("tr", {});
-  cells.forEach((c, i) => tr.append(el("td", i === 2 ? {class: "n", text: c} : (i === 0 ? {style: "border-left:4px solid " + color, text: c} : {text: c}))));
-  return tr;
+function flat(m) {
+  const o = {ts: m.ts, mti: m.mti};
+  for (const [k, v] of Object.entries(m.de)) {
+    if (v && typeof v === "object") for (const [s, x] of Object.entries(v)) o[k + "." + s] = x; else o[k] = v;
+  }
+  for (const [k, v] of Object.entries(m.meta || {})) o["meta." + k] = v;
+  return o;
+}
+
+function traceColor(m, traces) { return "hsl(" + (traces.indexOf((m.de["48"] || {})["63"]) * 70 + 210) % 360 + ",60%,55%)"; }
+
+function table(head, rows, colors, keyCols) {
+  return el("table", {class: "msgs"}, el("thead", {}, el("tr", {}, ...head)),
+    el("tbody", {}, ...rows.map((cells, r) => el("tr", {}, ...cells.map((c, i) => {
+      const td = el("td", {text: c, ...(keyCols[i] ? {class: "keyf"} : {})});
+      if (i === 0) td.style.borderLeft = "4px solid " + colors[r];
+      return td;
+    })))));
+}
+
+function rawTable(messages) {
+  const rows = messages.map(flat), cols = new Set();
+  rows.forEach(r => Object.keys(r).forEach(k => cols.add(k)));
+  const order = [...cols].sort((x, y) => (FIELD_ORDER.indexOf(x) + 1 || 999) - (FIELD_ORDER.indexOf(y) + 1 || 999));
+  const traces = [...new Set(messages.map(m => (m.de["48"] || {})["63"]))];
+  const head = order.map(k => {
+    const id = k === "ts" || k === "mti" || k.startsWith("meta.") ? k : "DE " + k;
+    return el("th", {class: KEY_FIELDS.has(k) ? "keyf" : "", title: KEY_FIELDS.has(k) ? "Key field: commonly used as a fraud-model input" : ""},
+      el("span", {class: "fc", text: id}), el("small", {text: FIELDS[k] || ""}));
+  });
+  return table(head, rows.map(r => order.map(k => r[k] === undefined ? "" : String(r[k]))), messages.map(m => traceColor(m, traces)), order.map(k => KEY_FIELDS.has(k)));
+}
+
+function cleanTable(messages) {
+  const traces = [...new Set(messages.map(m => (m.de["48"] || {})["63"]))];
+  const names = ["Time (UTC)", "Message", "Amount (DE 4)", "Merchant (DE 43)", "MCC (DE 18)", "Entry mode (DE 22.1)", "Response (DE 39)", "Trace ID (DE 48.63)", "Other"];
+  const rows = messages.map(m => {
+    const de = m.de, loc = de["43"] || {}, mti = m.mti;
+    const other = mti === "1442" ? "reason " + de["25"] + ": " + (REASONS[de["25"]] || "") : mti === "0400" ? "replacement amount " + money(de, "95") : "";
+    return [m.ts.slice(5, 10) + " " + m.ts.slice(11, 19), mti + " " + (MTI_NAMES[mti] || ""), de["4"] ? money(de, "4") : "",
+      loc.name ? loc.name + ", " + loc.city + " " + loc.country : "", de["18"] || "",
+      (mti === "0100" || mti === "0200") ? MODE_NAMES[(de["22"] || {})["1"]] || "" : "",
+      (mti === "0110" || mti === "0210" || mti === "0410") ? de["39"] + " " + (RESPONSES[de["39"]] || "") : "", (de["48"] || {})["63"] || "", other];
+  });
+  return table(names.map(n => el("th", {text: n})), rows, messages.map(m => traceColor(m, traces)), names.map(() => false));
+}
+
+function slot(messages) {
+  const host = el("div", {class: "tablewrap"});
+  const draw = () => host.replaceChildren(VIEW === "raw" ? rawTable(messages) : cleanTable(messages));
+  draw(); slots.push(draw);
+  return host;
+}
+
+function viewToggle() {
+  const box = el("div", {class: "seg", role: "group", "aria-label": "View"});
+  for (const [k, lab] of [["raw", "Raw fields"], ["clean", "Cleaned"]]) {
+    const b = el("button", {text: lab, "aria-pressed": String(k === VIEW)}); b.dataset.v = k;
+    b.addEventListener("click", () => {
+      VIEW = k;
+      document.querySelectorAll(".seg[aria-label=View] button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.v === VIEW)));
+      slots.forEach(f => f());
+    });
+    box.append(b);
+  }
+  return box;
 }
 
 function labelText(l) {
-  if (l.kind === "fraud") return "Fraud case: " + l.pattern.replace("_", " ") + (l.adjudicated ? " (confirmed by review)" : " (never confirmed)");
-  if (l.kind === "chargeback") return "Chargeback: reason " + (l.reason || "") + (l.cause === "fraud" ? ", caused by fraud" : ", an ordinary dispute");
+  if (l.kind === "fraud") return "Fraud: " + l.pattern.replace(/_/g, " ") + (l.adjudicated ? " (confirmed)" : " (never confirmed)");
+  if (l.kind === "chargeback") return "Chargeback: reason " + (l.reason || "") + (l.cause === "fraud" ? ", caused by fraud" : ", ordinary dispute");
   if (l.kind === "defect") return "Data defect: " + l.defect.replace(/_/g, " ");
   return l.kind;
 }
 
-function msgTable(messages) {
-  const traces = [...new Set(messages.map(m => (m.de["48"] || {})["63"]))];
-  const head = ["When (UTC)", "Message", "Amount", "Merchant · category", "How read", "Result", "Trace"];
-  return el("table", {class: "msgs"}, el("thead", {}, el("tr", {}, ...head.map(h => el("th", {text: h})))),
-    el("tbody", {}, ...messages.map(m => messageRow(m, "hsl(" + (traces.indexOf((m.de["48"] || {})["63"]) * 70 + 210) % 360 + ",60%,55%)"))));
+function keyLines(labels) {
+  if (!labels.length) return ["Ordinary, valid traffic. No label."];
+  const counts = new Map();
+  labels.forEach(l => { const t = labelText(l); counts.set(t, (counts.get(t) || 0) + 1); });
+  return [...counts].map(([t, n]) => n > 1 ? t + " × " + n : t);
+}
+
+function saveText(name, lines) {
+  const a = el("a", {href: URL.createObjectURL(new Blob([lines.join("\n") + "\n"], {type: "application/json"})), download: name});
+  document.body.append(a); a.click(); a.remove();
 }
 
 function showSample(i) {
   const ex = SAMPLE.examples[i], body = $("sample-body");
   $("sample-chips").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.i === i)));
   body.textContent = "";
-  const table = msgTable(ex.messages);
-  const keys = ex.labels.length ? ex.labels.map(l => el("li", {text: labelText(l) + " (trace " + l.trace.slice(0, 6) + ")"}))
-    : [el("li", {text: "No label: this is ordinary, valid traffic."})];
-  const raw = el("pre", {text: ex.messages.map(m => JSON.stringify(m)).join("\n")});
-  const dl = el("button", {text: "Download these messages (JSON lines)"});
-  dl.addEventListener("click", () => {
-    const a = el("a", {href: URL.createObjectURL(new Blob([ex.messages.map(m => JSON.stringify(m)).join("\n") + "\n"], {type: "application/json"})), download: "sample-" + ex.id + ".jsonl"});
-    document.body.append(a); a.click(); a.remove();
-  });
-  body.append(el("p", {style: "margin:0 0 6px"}, el("b", {text: ex.title + ". "}), ex.story),
-    el("p", {class: "note", style: "margin:0"}, el("b", {text: "Look for: "}), ex.watch),
-    el("div", {class: "tablewrap"}, table),
-    el("div", {class: "keybox"}, el("b", {text: "What the answer key says"}), " (a detector never sees this):", el("ul", {}, ...keys)),
-    el("details", {style: "margin-top:8px"}, el("summary", {text: "Show the raw messages (one JSON object per line)"}), raw),
+  const dl = el("button", {text: "Download (JSON lines)"});
+  dl.addEventListener("click", () => saveText("sample-" + ex.id + ".jsonl", ex.messages.map(m => JSON.stringify(m))));
+  body.append(el("p", {style: "margin:0 0 6px", text: ex.story}), slot(ex.messages),
+    el("div", {class: "keybox"}, el("b", {text: "Answer key: "}), keyLines(ex.labels).join(" · ")),
+    el("details", {style: "margin-top:8px"}, el("summary", {text: "Raw JSON"}), el("pre", {text: ex.messages.map(m => JSON.stringify(m)).join("\n")})),
     el("div", {class: "row"}, dl));
-  enrich(body);
 }
 
 function buildSample() {
@@ -733,7 +795,19 @@ function buildSample() {
     const b = el("button", {text: ex.title, "aria-pressed": String(i === 0)}); b.dataset.i = i;
     b.addEventListener("click", () => showSample(i)); chips.append(b);
   });
+  $("sample-view").append(viewToggle());
   showSample(0);
+}
+
+function buildTabs() {
+  const show = name => {
+    for (const k of ["build", "examples", "glossary"]) $("tab-" + k).hidden = k !== name;
+    document.querySelectorAll("#pagetabs button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tab === name)));
+    try { history.replaceState(null, "", "#" + name); } catch (e) { /* file or sandbox: the tab still switches */ }
+  };
+  document.querySelectorAll("#pagetabs button").forEach(b => b.addEventListener("click", () => show(b.dataset.tab)));
+  const h = location.hash.slice(1);
+  if (["examples", "glossary"].includes(h)) show(h);
 }
 
 // ---- live preview: the real generator, run in the browser with Pyodide ----------------------------------
@@ -780,57 +854,37 @@ async function runPreview(reroll) {
     preview = JSON.parse(fn(JSON.stringify(S.lev), s.seed + seedBump, s.cards, s.merchants, s.days, s.start));
     fn.destroy();
     showPreview();
-    status("Done. Scroll down to Your preview.");
+    status("Done.");
   } catch (e) { status("Preview failed: " + e.message); }
   finally { btn.disabled = false; }
-}
-
-function keyLines(labels) {
-  if (!labels.length) return ["No label: this is ordinary, valid traffic."];
-  const counts = new Map();
-  labels.forEach(l => { const t = labelText(l); counts.set(t, (counts.get(t) || 0) + 1); });
-  return [...counts].map(([t, n]) => n > 1 ? t + " (" + n + " purchases in this case)" : t);
-}
-
-function saveText(name, lines) {
-  const a = el("a", {href: URL.createObjectURL(new Blob([lines.join("\n") + "\n"], {type: "application/json"})), download: name});
-  document.body.append(a); a.click(); a.remove();
 }
 
 function showPreview() {
   const p = preview, sum = p.summary, host = $("preview-body");
   $("preview-card").hidden = false; host.textContent = "";
-  host.append(el("p", {style: "margin:0 0 6px", text: "Generated " + num0(sum.messages) + " messages (" + num0(sum.purchases) + " purchases) from " + num0(sum.cards) + " cards over " + sum.days +
-    " days in " + sum.seconds + " s, with your settings. Below are " + p.cases.length + " cases picked from it, ordinary purchases mixed in with cases the answer key would label, in time order. Each is shown the way a detector would see it. Which ones are odd, and why? Press Reveal to check."}));
   const totals = el("div", {class: "keybox", hidden: ""});
   const counts = Object.entries(sum.label_counts);
-  totals.append(el("b", {text: "Answer key for this whole preview run"}), el("ul", {},
-    ...(counts.length ? counts.map(([k, n]) => el("li", {text: k.replace(/[:_]/g, " ") + ": " + n})) : [el("li", {text: "No labelled cases in this run."})]),
-    ...sum.incidents.map(i => el("li", {text: i.id + " " + i.type.replace(/_/g, " ") + ", " + i.start.slice(5, 16).replace("T", " ") + " to " + i.end.slice(5, 16).replace("T", " ") + " UTC: " + i.effect})),
-    ...(sum.merchant_notes ? [el("li", {text: sum.merchant_notes + " merchant(s) behave oddly but legitimately (look-alikes that are not fraud)."})] : [])));
+  totals.append(el("b", {text: "Answer key, whole run"}), el("ul", {},
+    ...(counts.length ? counts.map(([k, n]) => el("li", {text: k.replace(/[:_]/g, " ") + ": " + n})) : [el("li", {text: "No labelled cases."})]),
+    ...sum.incidents.map(i => el("li", {text: i.id + " " + i.type.replace(/_/g, " ") + ", " + i.start.slice(5, 16).replace("T", " ") + " to " + i.end.slice(5, 16).replace("T", " ") + " UTC"})),
+    ...(sum.merchant_notes ? [el("li", {text: sum.merchant_notes + " look-alike merchant(s): odd but legitimate"})] : [])));
   const keys = [];
-  const reveal = el("button", {class: "primary", text: "Reveal all answers"});
+  const reveal = el("button", {class: "primary", text: "Reveal all"});
   let shown = false;
-  reveal.addEventListener("click", () => {
-    shown = !shown; reveal.textContent = shown ? "Hide all answers" : "Reveal all answers";
-    totals.hidden = !shown; keys.forEach(k => k(shown));
-  });
-  const again = el("button", {text: "Another sample"}); again.addEventListener("click", () => runPreview(true));
-  const dl1 = el("button", {text: "Download the messages (JSON lines)"}); dl1.addEventListener("click", () => saveText("preview-messages.jsonl", p.feed));
-  const dl2 = el("button", {text: "Download the answer key"}); dl2.addEventListener("click", () => saveText("preview-answer-key.jsonl", p.key));
-  host.append(el("div", {class: "row"}, reveal, again, dl1, dl2), totals);
+  reveal.addEventListener("click", () => { shown = !shown; reveal.textContent = shown ? "Hide all" : "Reveal all"; totals.hidden = !shown; keys.forEach(k => k(shown)); });
+  const again = el("button", {text: "New sample"}); again.addEventListener("click", () => runPreview(true));
+  const dl1 = el("button", {text: "Messages (.jsonl)"}); dl1.addEventListener("click", () => saveText("preview-messages.jsonl", p.feed));
+  const dl2 = el("button", {text: "Answer key (.jsonl)"}); dl2.addEventListener("click", () => saveText("preview-answer-key.jsonl", p.key));
+  host.append(el("div", {class: "bar2"}, el("span", {class: "grow", text: num0(sum.messages) + " messages · " + num0(sum.purchases) + " purchases · " + num0(sum.cards) + " cards · " + sum.days + " days · " + sum.seconds + " s"}), viewToggle()),
+    el("div", {class: "row", style: "margin:0 0 6px"}, reveal, again, dl1, dl2), totals);
   p.cases.forEach(c => {
-    const box = el("div", {class: "keybox", hidden: ""}, el("b", {text: "What the answer key says"}), el("ul", {}, ...keyLines(c.labels).map(t => el("li", {text: t}))));
+    const box = el("div", {class: "keybox", hidden: ""}, el("b", {text: "Answer key: "}), keyLines(c.labels).join(" · "));
     const btn = el("button", {text: "Reveal"});
     const set = on => { box.hidden = !on; btn.textContent = on ? "Hide" : "Reveal"; };
     btn.addEventListener("click", () => set(box.hidden));
     keys.push(set);
-    const first = c.messages[0], loc = first.de["43"] || {};
-    host.append(el("div", {class: "pvcase"},
-      el("h3", {text: "Case " + c.n + " · " + c.messages.length + " messages · card " + (first.de["2"] || "") + " · " + (loc.country || "")}),
-      el("div", {class: "tablewrap"}, msgTable(c.messages)), el("div", {class: "row"}, btn), box));
+    host.append(el("div", {class: "pvcase"}, el("h3", {text: "Case " + c.n + " · " + c.messages.length + " messages"}), slot(c.messages), el("div", {class: "row"}, btn), box));
   });
-  enrich(host);
   $("preview-card").scrollIntoView({behavior: "smooth", block: "start"});
 }
 
@@ -870,7 +924,7 @@ $("s-strip").addEventListener("change", e => { stripSim = e.target.checked; sync
 buildChrome(); buildSize(); buildLevers(); buildMix(); buildGlossary(); applyPreset("Default");
 $("add-incident").addEventListener("click", () => { S.lev.custom_incidents.push(newIncident("acquirer_outage")); buildCustom(); sync(); });
 $("pv-go").addEventListener("click", () => runPreview(false));
-buildSample(); enrich(document.body); setupTooltip();
+buildSample(); buildTabs(); enrich(document.body); setupTooltip();
 </script>
 </body>
 </html>
