@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 
 from txnforge import generate
-from txnforge.levers import ESTIMATE, Levers, estimate
+from txnforge.settings import ESTIMATE, Settings, estimate
 
 PAGE = Path(__file__).resolve().parents[1] / "docs" / "index.html"
 
@@ -16,7 +16,7 @@ def page_defaults():
 
 def test_designer_defaults_match_python_defaults():
     _, defaults = page_defaults()
-    assert defaults == Levers().as_dict()
+    assert defaults == Settings().as_dict()
 
 
 def test_designer_estimate_coefficients_match_python():
@@ -26,7 +26,7 @@ def test_designer_estimate_coefficients_match_python():
 
 
 def test_designer_incident_catalog_matches_python():
-    from txnforge.levers import INCIDENT_INFO
+    from txnforge.settings import INCIDENT_INFO
     text = PAGE.read_text(encoding="utf-8")
     block = re.search(r"/\*INCIDENT_INFO\*/\s*const INCIDENT_INFO = (\{.*?\});\s*/\*END INCIDENT_INFO\*/", text, re.S)
     assert json.loads(block.group(1)) == INCIDENT_INFO
@@ -38,10 +38,10 @@ def test_designer_defines_every_glossary_term_it_promises():
         assert f'["{term}' in text, term
 
 
-def test_designer_has_a_control_for_every_lever():
+def test_designer_has_a_control_for_every_setting():
     text, _ = page_defaults()
     controls = {"fraud_mix", "incidents", "custom_incidents"}      # built from their own sections, not the LEVERS table
-    for name in Levers().as_dict():
+    for name in Settings().as_dict():
         assert name in controls or f'key: "{name}"' in text, name
 
 
@@ -53,7 +53,7 @@ def test_size_estimate_is_close_to_real_feeds():
                              fraud_mix={"card_testing": 3, "geo_velocity": 1})),
     ]
     for cards, days, merchants, lv in cases:
-        actual = generate(seed=21, cards=cards, merchants=merchants, days=days, levers=lv)["messages"]
+        actual = generate(seed=21, cards=cards, merchants=merchants, days=days, settings=lv)["messages"]
         est = estimate(cards, days, lv)["messages"]
         assert abs(est - len(actual)) / len(actual) < .06, (cards, days, est, len(actual))
 
@@ -67,7 +67,7 @@ def test_designer_output_is_accepted_by_python():
     defaults["fraud_mix"] = {"card_testing": 3, "geo_velocity": 1}
     defaults["incidents"] = ["issuer_outage"]
     defaults["duplicate_rate"] = .01
-    assert Levers.coerce(defaults).duplicate_rate == .01
+    assert Settings.coerce(defaults).duplicate_rate == .01
 
 
 def test_designer_lets_you_type_a_number_of_events():
@@ -106,9 +106,9 @@ def test_browser_preview_returns_masked_stripped_mixed_cases():
     spec = importlib.util.spec_from_file_location("preview_glue", root / "docs" / "py" / "preview_glue.py")
     glue = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(glue)
-    levers = Levers().as_dict()
-    levers.update(fraud_rate=.03, dispute_rate=.03, duplicate_rate=.01)
-    out = json.loads(glue.preview(json.dumps(levers), 5, 5000, 400, 30, "2026-03-02"))   # caps must apply
+    settings = Settings().as_dict()
+    settings.update(fraud_rate=.03, dispute_rate=.03, duplicate_rate=.01)
+    out = json.loads(glue.preview(json.dumps(settings), 5, 5000, 400, 30, "2026-03-02"))   # caps must apply
     s = out["summary"]
     assert s["cards"] == glue.MAX_CARDS and s["days"] == glue.MAX_DAYS and s["merchants"] == glue.MAX_MERCHANTS
     cases = out["cases"]

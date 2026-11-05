@@ -3,7 +3,7 @@ from collections import defaultdict
 
 from txnforge import generate, validate
 from txnforge.generator import plan_shards
-from txnforge.levers import cards_for_target, estimate
+from txnforge.settings import cards_for_target, estimate
 
 SMALL = dict(seed=5, cards=500, merchants=120, days=3, shard_cards=200)      # 3 groups
 
@@ -74,7 +74,7 @@ def test_target_messages_picks_a_sensible_card_count():
 
 
 def test_run_cost_matches_the_measured_ten_million_run():
-    from txnforge.levers import run_cost
+    from txnforge.settings import run_cost
     cost = run_cost(10_057_020)
     assert abs(cost["seconds"] - 327) < 20 and abs(cost["disk_gb"] - 3.7) < .2 and cost["workers"] == 4
     assert run_cost(100_000)["workers"] == 1

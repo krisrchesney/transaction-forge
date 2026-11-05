@@ -33,13 +33,13 @@ def label_type(row):
     return row["kind"] + (":" + str(row.get("pattern") or row.get("defect") or "") if row["kind"] != "chargeback" else "")
 
 
-def preview(levers_json, seed, cards, merchants, days, start):
+def preview(settings_json, seed, cards, merchants, days, start):
     t0 = time.time()
     cards = max(50, min(int(cards), MAX_CARDS))
     days = max(MIN_DAYS, min(int(days), MAX_DAYS))
     merchants = max(100, min(int(merchants), MAX_MERCHANTS))
     r = generate(seed=int(seed), cards=cards, merchants=merchants, days=days, start=start,
-                 levers=json.loads(levers_json), strip_sim=True)
+                 settings=json.loads(settings_json), strip_sim=True)
     msgs = r["messages"]
     end = (dt.datetime.fromisoformat(start) + dt.timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
     incidents = [i for i in r["incidents"] if i["start"] < end]   # incidents scheduled after the window never happen

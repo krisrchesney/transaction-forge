@@ -14,7 +14,7 @@ import random
 import time
 from pathlib import Path
 
-from .levers import INCIDENT_INFO, Levers
+from .settings import INCIDENT_INFO, Settings
 from .rules import (BASE_DECLINE_MIX, FINAL_AUTH_PROTECTION_DAYS, MCCS, PREAUTH_PROTECTION_DAYS,
                     NETWORK_BIN_RANGES, RESPONSE_CODES)
 
@@ -149,11 +149,11 @@ def build_population(rng, n_cards, n_merchants, n_issuers=25):
 
 # ---- message builders --------------------------------------------------------------------------
 class Feed:
-    def __init__(self, rng, levers=None, shard=0):
+    def __init__(self, rng, settings=None, shard=0):
         self.rng, self.msgs, self.stan, self.txn, self.shard = rng, [], 0, 0, shard
         self.labels = []
         self.incs = []          # the incidents in force; some change how messages are built (clearing delay)
-        self.lv = Levers.coerce(levers)
+        self.lv = Settings.coerce(settings)
 
     def next_txn(self):
         self.txn += 1
@@ -193,10 +193,10 @@ def to_local(t, country):
 
 
 # ---- incidents (the answer key for operational monitoring) -------------------------------------
-def default_incidents(start, days, levers=None, merchants=None, prepared=True):
+def default_incidents(start, days, settings=None, merchants=None, prepared=True):
     """The five prepared incidents. Targets that depend on who exists in the world (which acquirer runs pay-at-pump
     merchants) are chosen from `merchants`, so an incident always lands on something."""
-    lv = Levers.coerce(levers)
+    lv = Settings.coerce(settings)
     d = lambda n, h=0: start + dt.timedelta(days=n, hours=h)
     fuel = [m["acquirer"] for m in (merchants or []) if m["mcc"] == "5542"]
     acq = max(sorted(set(fuel)), key=fuel.count) if fuel else "ACQ03"
@@ -280,7 +280,7 @@ def plan_shards(cards, days, shard_cards=None):
 
 def _run_shard(job):
     """Generate one group of cards end to end: purchases, fraud, chargebacks, defects. Runs in a worker process."""
-    lv = Levers.coerce(job["levers"])
+    lv = Settings.coerce(job["settings"])
     seed, idx, days = job["seed"], job["idx"], job["days"]
     start_dt = dt.datetime.fromisoformat(job["start"])
     issuers, bins, merch_list, by_key = build_world(random.Random(f"{seed}-world"), job["merchants"])
@@ -426,12 +426,12 @@ def merge_sorted(parts, dest):
 
 
 def generate(seed=7, cards=3000, merchants=400, days=14, start="2026-03-02", incidents=True,
-             fraud_rate=None, out_dir=None, levers=None, workers=1, shard_cards=None, progress=None,
-             strip_sim=False):
+             fraud_rate=None, out_dir=None, settings=None, workers=1, shard_cards=None, progress=None,
+             strip_sim=False, levers=None):
     """Without out_dir the feed comes back in memory (fine up to a few hundred thousand messages). With out_dir it is
     generated group by group, in parallel across `workers` processes, streamed to disk and merged into time order, so
     size is limited by disk rather than memory. In that case only the manifest comes back."""
-    lv = Levers.coerce(levers)
+    lv = Settings.coerce(settings if settings is not None else levers)   # `levers` is the old name for `settings`
     if fraud_rate is not None:
         lv = lv.with_overrides(fraud_rate=fraud_rate)
     start_dt = dt.datetime.fromisoformat(start)
@@ -442,7 +442,7 @@ def generate(seed=7, cards=3000, merchants=400, days=14, start="2026-03-02", inc
     if out:
         out.mkdir(parents=True, exist_ok=True)
     jobs = [dict(seed=seed, idx=i, n_cards=sizes[i], fraud_k=total // n + (1 if i < total % n else 0),
-                 merchants=merchants, days=days, start=start, incidents=incidents, levers=lv.as_dict(),
+                 merchants=merchants, days=days, start=start, incidents=incidents, settings=lv.as_dict(),
                  strip_sim=strip_sim, out_dir=str(out) if out else None) for i in range(n)]
     t0 = time.time()
     results = sorted(run_jobs(jobs, workers if out else 1, progress), key=lambda r: r["idx"])
@@ -454,7 +454,7 @@ def generate(seed=7, cards=3000, merchants=400, days=14, start="2026-03-02", inc
             counts[key] = counts.get(key, 0) + c
     manifest = dict(seed=seed, cards=cards, merchants=merchants, days=days, start=start,
                     n_messages=sum(r["n_messages"] for r in results), issuers=results[0]["issuers"],
-                    levers=lv.as_dict(), label_counts=dict(sorted(counts.items())), shards=n,
+                    settings=lv.as_dict(), label_counts=dict(sorted(counts.items())), shards=n,
                     workers=min(workers, n) if out else 1, seconds=round(time.time() - t0, 1), strip_sim=strip_sim)
     if out:
         merge_sorted([out / r["part"] for r in results], out / "messages.jsonl")
