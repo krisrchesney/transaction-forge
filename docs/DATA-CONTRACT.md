@@ -31,7 +31,7 @@ Prebuilt sample datasets are described at the end; `tools/make_datasets.py` rege
 | 1240 | First presentment (clearing) |
 | 1442 | Chargeback; reason in DE 25 |
 
-Amounts are in minor units, zero-padded (DE 4). Currency is the ISO numeric code (DE 49). Timestamps are UTC.
+Amounts are in minor units, zero-padded (DE 4). Currency is the ISO numeric code (DE 49). Timestamps are UTC. Online purchases (entry modes 01, 10, 81) carry the cardholder ZIP in DE 120; the field number is a placeholder until checked against the interface specification. Honest buyers type the card's billing ZIP, and thieves usually do not.
 
 **Join on the trace ID** (`de["48"]["63"]`), as a real analyst would. One trace is one purchase: its authorization and response, any reversal, the clearing and any chargeback. The ATM, refund and each step of a pay-at-pump purchase get their own traces.
 

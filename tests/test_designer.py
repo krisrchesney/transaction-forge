@@ -119,3 +119,11 @@ def test_browser_preview_returns_masked_stripped_mixed_cases():
     assert all(re.fullmatch(r"\d{6}\*+\d{4}", m["de"]["2"]) for c in cases for m in c["messages"] if m["de"].get("2"))
     assert all(i["start"] < "2026-03-09T00:00:00Z" for i in s["incidents"])
     assert len(out["feed"]) == s["messages"] and out["key"]
+
+
+def test_raw_view_column_order_covers_every_named_field():
+    text = PAGE.read_text(encoding="utf-8")
+    fields = re.search(r"const FIELDS = \{(.*?)\};", text, re.S).group(1)
+    named = re.findall(r'"([\w.]+)": "', fields)
+    order = re.search(r"const FIELD_ORDER = \[(.*?)\];", text, re.S).group(1)
+    assert re.findall(r'"([\w.]+)"', order) == named      # same fields, same order: ts and mti first, DE numbers after

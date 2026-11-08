@@ -9,6 +9,7 @@ import datetime as dt
 import heapq
 import json
 import math
+import zlib
 import os
 import random
 import time
@@ -154,6 +155,7 @@ class Feed:
         self.labels = []
         self.incs = []          # the incidents in force; some change how messages are built (clearing delay)
         self.lv = Settings.coerce(settings)
+        self.guessing_zip = False   # True while a thief who does not know the billing ZIP is shopping online
 
     def next_txn(self):
         self.txn += 1
@@ -171,6 +173,21 @@ class Feed:
 
 def amount_str(amt):
     return f"{int(round(amt * 100)):012d}"
+
+
+CNP_MODES = ("01", "81", "10")      # keyed, online, stored card: the card is not at the terminal, so the shop asks for a ZIP
+
+
+def home_zip(pan):
+    """A card's billing ZIP, fixed by its number so it needs no random draws and never reshuffles the feed."""
+    return f"{zlib.crc32(pan.encode()) % 10**5:05d}"
+
+
+def cardholder_zip(feed, card, txn):
+    pan = card["pan"]
+    if feed.guessing_zip and zlib.crc32((pan + txn).encode()) % 10 < 7:
+        return f"{zlib.crc32((txn + pan).encode()) % 10**5:05d}"      # a thief usually guesses wrong
+    return home_zip(pan)
 
 
 def make_auth_de(card, merch, amt, mode, cur, status="0", proc="00"):
@@ -638,6 +655,8 @@ def decide(rng, card, merch, mode, t, by_type, base_decline=.06):
 
 def auth_pair(feed, rng, card, merch, t, amt, cur, mode, code, latency, txn, status="0", proc="00"):
     de = make_auth_de(card, merch, amt, mode, cur, status, proc)
+    if mode in CNP_MODES:
+        de["120"] = cardholder_zip(feed, card, txn)      # address verification request: the cardholder ZIP the buyer typed
     rrn = f"{rng.randrange(10**12):012d}"
     trace = f"{rng.randrange(36**9):09X}"[:9] + t.strftime("%m%d")
     de["37"] = rrn
@@ -716,6 +735,7 @@ def rev(feed, t, req, trace, new_amt, txn):
 # ---- fraud with ground truth ---------------------------------------------------------------------
 def emit_fraud(feed, rng, card, start_dt, days, by_key, merch_list, window=None, incident=None):
     kind = pick(rng, feed.lv.fraud_mix)
+    feed.guessing_zip = kind in ("card_testing", "electronics_ring")
     if window:
         t0 = window[0] + (window[1] - window[0]) * rng.random()
     else:
@@ -752,6 +772,7 @@ def emit_fraud(feed, rng, card, start_dt, days, by_key, merch_list, window=None,
     else:
         pool = by_key.get(("US", "5732")) or by_key.get(("*", "5732"))
         if not pool:
+            feed.guessing_zip = False
             return
         for i in range(rng.randint(3, 6)):
             txn = feed.next_txn(); txns.append(txn)
@@ -763,3 +784,4 @@ def emit_fraud(feed, rng, card, start_dt, days, by_key, merch_list, window=None,
     if incident:
         label["incident"] = incident
     feed.labels.append(label)
+    feed.guessing_zip = False

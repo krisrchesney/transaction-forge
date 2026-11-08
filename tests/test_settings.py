@@ -112,3 +112,21 @@ def test_old_names_still_work():
     new = generate(seed=3, cards=60, merchants=100, days=2, settings={"fraud_rate": 0})
     old = generate(seed=3, cards=60, merchants=100, days=2, levers={"fraud_rate": 0})
     assert new["messages"] == old["messages"]
+
+
+def test_online_purchases_carry_a_cardholder_zip_and_thieves_get_it_wrong():
+    from txnforge.generator import CNP_MODES, home_zip
+    r = generate(seed=11, cards=600, merchants=150, days=5, incidents=False,
+                 settings={"fraud_rate": .05, "fraud_mix": {"card_testing": 1, "electronics_ring": 1}})
+    stolen = {t for lab in r["labels"] if lab["kind"] == "fraud" for t in lab["txns"]}
+    ok = bad = 0
+    for m in r["messages"]:
+        if m["mti"] != "0100":
+            continue
+        online = m["de"]["22"]["1"] in CNP_MODES
+        assert ("120" in m["de"]) == online                         # only card-not-present requests carry it
+        if online and m["sim"]["txn"] not in stolen:
+            assert m["de"]["120"] == home_zip(m["de"]["2"])          # honest buyers type the billing ZIP
+        if online and m["sim"]["txn"] in stolen:
+            ok, bad = ok + (m["de"]["120"] == home_zip(m["de"]["2"])), bad + (m["de"]["120"] != home_zip(m["de"]["2"]))
+    assert bad > ok and bad > 20                                     # about 70% of thief purchases mismatch

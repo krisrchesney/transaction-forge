@@ -8,15 +8,17 @@ It is a learning and design project. It is not affiliated with any card network 
 
 **Try the Event Builder in your browser:** https://krisrchesney.github.io/transaction-forge/ (it runs entirely in the page; nothing is uploaded). Pick your settings and press **Generate a preview**: the real generator runs in your browser (through Pyodide, Python compiled for the web, fetched from a public CDN on first use, about 10 MB) and shows a small sample the way a detector would see it, with each case's answer hidden until you reveal it. There is also a hand-picked sample of ten purchases. Full-size runs happen on your own computer: the page writes the settings and the command.
 
+![The Event Builder's Examples tab: raw fields of a card-testing example, key fields starred](docs/screenshot.jpg)
+
 ## Try it
 
 ```bash
 pip install -e ".[dev]"
 txnforge generate --out out/demo            # ~120,000 messages, 14 days, 3,000 cards
 txnforge validate out/demo/messages.jsonl   # findings, each with its rule and citation
-pytest                                      # 88 tests
+pytest                                      # 94 tests
 uvicorn txnforge.api:app                    # sandbox API on http://127.0.0.1:8000/docs
-txnforge settings                             # every dial and its default
+txnforge settings                           # every dial and its default
 ```
 
 Output of one run (seed 7):
@@ -102,7 +104,7 @@ GET /quality                                                # SQL metrics by reg
 | 1240 | First presentment (clearing) |
 | 1442 | Chargeback, reason in DE 25, referencing the cleared sale by trace ID |
 
-Data elements used: 2 PAN, 3 processing code, 4 amount, 18 MCC, 22 POS entry mode, 32 acquirer, 37 retrieval reference, 39 response code, 41/42 terminal and merchant IDs, 43 merchant name and location, 48 (subelement 63 trace ID), 49 currency, 61 (subfield 7 transaction status), 90 original data elements, 95 replacement amount.
+Data elements used: 2 PAN, 3 processing code, 4 amount, 18 MCC, 22 POS entry mode, 32 acquirer, 37 retrieval reference, 39 response code, 41/42 terminal and merchant IDs, 43 merchant name and location, 48 (subelement 63 trace ID), 49 currency, 61 (subfield 7 transaction status), 90 original data elements, 95 replacement amount, 120 cardholder postal code (online purchases only; a placeholder field number until checked against the interface specification).
 
 Lifecycles it knows: plain purchase, decline, refund, acquirer timeout then full reversal, hotel preauthorization with partial reversal and later clearing, pay-at-pump two-step authorization, ATM single message, chip fallback.
 
@@ -145,7 +147,7 @@ An empty target uses the type's default (for example ISS07, ACQ01, FL, GB) and `
 
 ## The rule pack
 
-Every rule is tagged **network** (stated in the Transaction Processing Rules, with the section) or **heuristic** (industry operating knowledge, not a numbered rule). That distinction matters: an anomaly you can cite is a finding, one you cannot is a hypothesis.
+Every rule is tagged **network** (stated in the card network's rulebook, with the section) or **heuristic** (industry operating knowledge, not a numbered rule). That distinction matters: an anomaly you can cite is a finding, one you cannot is a hypothesis.
 
 | Id | Kind | Rule (short) |
 |---|---|---|
@@ -170,6 +172,7 @@ curl -X POST "http://127.0.0.1:8000/scenarios/fuel_two_step?seed=3"
 
 ## Known limits
 
+- The cardholder ZIP field number (DE 120) is a placeholder, and the 70% wrong-ZIP rate for thieves is our choice, not a measured figure.
 - Field values for DE 22 other than 07 come from general knowledge of the network's interface specification, which was not available here: check them before relying on them.
 - The message layout is JSON with numbered data elements, not a bitmap-encoded ISO 8583 message.
 - The fuel pattern (small first authorization, then the real amount) is an observed industry behavior, not something a specific Rulebook section prescribes; the rules around preauthorization timing are.
@@ -179,13 +182,19 @@ curl -X POST "http://127.0.0.1:8000/scenarios/fuel_two_step?seed=3"
 ## Layout
 
 ```
+src/txnforge/settings.py     every setting, validation, size estimate
 src/txnforge/rules.py        rules and catalogs as data, each with a source
 src/txnforge/generator.py    population, lifecycles, fraud, incidents
 src/txnforge/validator.py    rule checks with citations
 src/txnforge/scenarios.py    single-transaction sandbox scenarios
 src/txnforge/lookup.py       SQLite lookup, residency policy, SQL metrics
 src/txnforge/api.py          FastAPI sandbox
+src/txnforge/cli.py          txnforge generate | validate | settings
+docs/index.html              the Event Builder page (hosted on GitHub Pages)
+docs/py/                     copies of the modules the page preview runs in the browser
 docs/PRD.md                  product requirements for the sandbox
+docs/DATA-CONTRACT.md        files, labels and scoring for a detector
+tools/make_datasets.py       builds the seven ready-made datasets
 ```
 
 ## Safety and licence
