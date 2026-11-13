@@ -6,6 +6,8 @@ Most synthetic payments data is random rows with plausible columns. This one mod
 
 It is a learning and design project. It is not affiliated with any card network and is not wire-compatible with any network format. Its rule citations paraphrase a published card-network processing rulebook (June 2025 edition); section numbers are kept so a reader with that document can check them. It is no substitute for a network's own specifications.
 
+**Why this exists, in plain language:** [WHY.md](WHY.md)
+
 **Try the Event Builder in your browser:** https://krisrchesney.github.io/transaction-forge/ (it runs entirely in the page; nothing is uploaded). Pick your settings and press **Generate a preview**: the real generator runs in your browser (through Pyodide, Python compiled for the web, fetched from a public CDN on first use, about 10 MB) and shows a small sample the way a detector would see it, with each case's answer hidden until you reveal it. There is also a hand-picked sample of ten purchases. Full-size runs happen on your own computer: the page writes the settings and the command.
 
 ![The Event Builder's Examples tab: raw fields of a card-testing example, key fields starred](docs/screenshot.jpg)
